@@ -51,7 +51,7 @@ export const UpdatePostDTO = t.Object(
 					"https://example.com/images/typescript-cover.jpg",
 					"/uploads/covers/my-post-cover.png",
 				],
-				format: "uri",
+				format: "url",
 			}),
 		),
 	},

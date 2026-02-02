@@ -38,7 +38,7 @@ export const BuildPostDTO = t.Object(
 		cover: t.String({
 			description: "The URL or path to the cover image of the post.",
 			examples: ["https://example.com/cover.jpg"],
-			format: "uri",
+			format: "url",
 		}),
 	},
 	{
