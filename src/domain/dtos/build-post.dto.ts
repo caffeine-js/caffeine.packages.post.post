@@ -7,9 +7,9 @@ export const BuildPostDTO = t.Object(
 			description: "The unique identifier of the post type.",
 			examples: ["550e8400-e29b-41d4-a716-446655440000"],
 		}),
-		tags: t.Array(t.String({ format: "uuid" }), {
-			description: "A list of tag IDs associated with the post.",
-			examples: [["550e8400-e29b-41d4-a716-446655440000"]],
+		tags: t.Array(t.String(), {
+			description: "A list of tag slugs associated with the post.",
+			examples: [["typescript", "programming", "web-development"]],
 		}),
 		name: t.String({
 			description: "The name or title of the post.",
@@ -28,6 +28,7 @@ export const BuildPostDTO = t.Object(
 		cover: t.String({
 			description: "The URL or path to the cover image of the post.",
 			examples: ["https://example.com/cover.jpg"],
+			format: "uri",
 		}),
 	},
 	{

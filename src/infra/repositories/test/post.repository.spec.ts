@@ -236,7 +236,7 @@ describe("PostRepository", () => {
 			await repository.create(post3);
 
 			// Mock do PostType (apenas com a propriedade id necessária)
-			const postType = { id: postTypeId1 } as any;
+			const postType = { id: postTypeId1 } as never;
 
 			// Act
 			const posts = await repository.findManyByPostType(postType, 1);
@@ -251,7 +251,7 @@ describe("PostRepository", () => {
 			const post = Post.make(makeValidPostData());
 			await repository.create(post);
 
-			const differentPostType = { id: faker.string.uuid() } as any;
+			const differentPostType = { id: faker.string.uuid() } as never;
 
 			// Act
 			const posts = await repository.findManyByPostType(differentPostType, 1);
@@ -270,7 +270,7 @@ describe("PostRepository", () => {
 				await repository.create(post);
 			}
 
-			const postType = { id: postTypeId } as any;
+			const postType = { id: postTypeId } as never;
 
 			// Act
 			const page1 = await repository.findManyByPostType(postType, 1);

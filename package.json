@@ -34,6 +34,7 @@
   "scripts": {
     "build": "tsup 'src/**/index.ts' --format cjs,esm --dts --tsconfig tsconfig.build.json --clean",
     "test:unit": "vitest run",
+    "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "setup": "bun run build && bun link"
   },
@@ -41,6 +42,7 @@
     "@faker-js/faker": "^10.2.0",
     "@types/bun": "latest",
     "@vitest/coverage-v8": "^4.0.18",
+    "@vitest/ui": "^4.0.18",
     "tsup": "^8.5.1",
     "vite-tsconfig-paths": "^6.0.5",
     "vitest": "^4.0.18"
@@ -50,14 +52,15 @@
     "elysia": "^1.4.22"
   },
   "dependencies": {
+    "@caffeine-packages/post.db.prisma-drive": "link:@caffeine-packages/post.db.prisma-drive",
+    "@caffeine-packages/post.post-tag": "link:@caffeine-packages/post.post-tag",
+    "@caffeine-packages/post.post-type": "link:@caffeine-packages/post.post-type",
     "@caffeine/auth": "link:@caffeine/auth",
     "@caffeine/constants": "link:@caffeine/constants",
     "@caffeine/errors": "link:@caffeine/errors",
     "@caffeine/models": "link:@caffeine/models",
-    "@caffeine-packages/post.db.prisma-drive": "link:@caffeine-packages/post.db.prisma-drive",
-    "@caffeine-packages/post.post-type": "link:@caffeine-packages/post.post-type",
-    "@caffeine-packages/post.post-tag": "link:@caffeine-packages/post.post-tag",
     "@caffeine/redis-drive": "link:@caffeine/redis-drive",
+    "@elysiajs/eden": "^1.4.6",
     "elysia": "^1.4.22"
   }
 }
