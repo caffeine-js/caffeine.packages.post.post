@@ -1,45 +1,47 @@
 import type { IPostRepository } from "@/domain/types/post-repository.interface";
 import type { CreatePostDTO } from "../dtos/create-post.dto";
-import type { IUnmountedPost } from "@/domain/types";
 import { PostUniquenessChecker } from "@/domain/services/post-uniqueness-checker.service";
 import { slugify } from "@caffeine/models/helpers";
-import {
-	ResourceAlreadyExistsException,
-	ResourceNotFoundException,
-} from "@caffeine/errors/application";
+import { ResourceAlreadyExistsException } from "@caffeine/errors/application";
 import { Post } from "@/domain/post";
 import type { IPostTagRepository } from "@/domain/types/post-tag-repository.interface";
 import type { IPostTypeRepository } from "@/domain/types/post-type-repository.interface";
+import type { ICompletePost } from "../types/complete-post.interface";
+import { FindPostTypeByIdService } from "../services/find-post-type-by-id.service";
+import { FindPostTagsService } from "../services/find-post-tags.service";
 
 export class CreatePostUseCase {
-	public constructor(
-		private readonly postRepository: IPostRepository,
-		private readonly postTagRepository: IPostTagRepository,
-		private readonly postTypeRepository: IPostTypeRepository,
-	) {}
+	private readonly findPostTags: FindPostTagsService;
+	private readonly findPostTypeById: FindPostTypeByIdService;
 
-	public async run(data: CreatePostDTO): Promise<IUnmountedPost> {
-		const uniquenessChecker = new PostUniquenessChecker(this.postRepository);
+	public constructor(
+		private readonly repository: IPostRepository,
+		readonly postTagRepository: IPostTagRepository,
+		readonly postTypeRepository: IPostTypeRepository,
+	) {
+		this.findPostTags = new FindPostTagsService(postTagRepository);
+		this.findPostTypeById = new FindPostTypeByIdService(postTypeRepository);
+	}
+
+	public async run(data: CreatePostDTO): Promise<ICompletePost> {
+		const uniquenessChecker = new PostUniquenessChecker(this.repository);
 
 		const slug = slugify(data.name);
 
 		if (await uniquenessChecker.run(slug))
 			throw new ResourceAlreadyExistsException("post@post");
 
-		for (const tag of data.tags) {
-			if (!(await this.postTagRepository.findById(tag)))
-				throw new ResourceNotFoundException(`post@post::tags->${tag}`);
-		}
-
-		if (!(await this.postTypeRepository.findById(data.postTypeId)))
-			throw new ResourceNotFoundException(
-				`post@post::postType->${data.postTypeId}`,
-			);
+		const [tags, postType] = await Promise.all([
+			await this.findPostTags.run(data.tags),
+			await this.findPostTypeById.run(data.postTypeId),
+		]);
 
 		const targetPost = Post.make({ ...data, slug });
 
-		await this.postRepository.create(targetPost);
+		await this.repository.create(targetPost);
 
-		return targetPost.unpack();
+		const { postTypeId: _1, tags: _2, ...properties } = targetPost.unpack();
+
+		return { postType, tags, ...properties };
 	}
 }
