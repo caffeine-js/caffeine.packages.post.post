@@ -1,9 +1,10 @@
-export interface IPost {
+import type { IEntity } from "@caffeine/models/types";
+
+export interface IUnmountedPost extends IEntity {
 	postTypeId: string;
 	name: string;
 	slug: string;
 	description: string;
-	// TODO: Criar um pacote pro AWS S3
 	cover: string;
 	tags: string[];
 }
