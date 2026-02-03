@@ -32,8 +32,8 @@ export class CreatePostUseCase {
 			throw new ResourceAlreadyExistsException("post@post");
 
 		const [tags, postType] = await Promise.all([
-			await this.findPostTags.run(data.tags),
-			await this.findPostTypeById.run(data.postTypeId),
+			this.findPostTags.run(data.tags),
+			this.findPostTypeById.run(data.postTypeId),
 		]);
 
 		const targetPost = Post.make({ ...data, slug });

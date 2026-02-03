@@ -1,6 +1,6 @@
-import type { PostType } from "@caffeine-packages/post.post-type/domain";
 import type { Post } from "../post";
 import type { IUnmountedPost } from "./unmounted-post.interface";
+import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
 
 export interface IPostRepository {
 	create(post: Post): Promise<void>;
@@ -8,7 +8,7 @@ export interface IPostRepository {
 	findBySlug(slug: string): Promise<IUnmountedPost | null>;
 	findMany(page: number): Promise<IUnmountedPost[]>;
 	findManyByPostType(
-		postType: PostType,
+		postType: IUnmountedPostType,
 		page: number,
 	): Promise<IUnmountedPost[]>;
 	update(post: Post): Promise<void>;

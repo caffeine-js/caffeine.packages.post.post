@@ -6,7 +6,7 @@ import type { ICompletePost } from "../types/complete-post.interface";
 import { FindPostTypeByIdService } from "../services/find-post-type-by-id.service";
 import { FindPostTagsService } from "../services/find-post-tags.service";
 
-export class FindPostBySlugUseCase {
+export class FindPostByIdUseCase {
 	private readonly findPostTags: FindPostTagsService;
 	private readonly findPostTypeById: FindPostTypeByIdService;
 
@@ -20,7 +20,7 @@ export class FindPostBySlugUseCase {
 	}
 
 	public async run(slug: string): Promise<ICompletePost> {
-		const targetPost = await this.repository.findBySlug(slug);
+		const targetPost = await this.repository.findById(slug);
 
 		if (!targetPost) throw new ResourceNotFoundException(`post@post`);
 

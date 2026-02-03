@@ -20,6 +20,15 @@ export class PostTypeRepository implements IPostTypeRepository {
 		return this.types.get(id) ?? null;
 	}
 
+	async findBySlug(slug: string): Promise<IUnmountedPostType | null> {
+		for (const type of this.types.values()) {
+			if (type.slug === slug) {
+				return type;
+			}
+		}
+		return null;
+	}
+
 	/**
 	 * Popula o repositório com dados de teste
 	 * @param types - Array de tipos para adicionar

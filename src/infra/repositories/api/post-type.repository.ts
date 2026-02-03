@@ -9,12 +9,24 @@ export class PostTypeRepository implements IPostTypeRepository {
 	)["post-type"];
 
 	async findById(id: string): Promise<IUnmountedPostType | null> {
-		const targetPostTagRequest = await this.postTagTypeService({ id }).get();
+		const targetPostTypeRequest = await this.postTagTypeService({ id }).get();
 
-		if (targetPostTagRequest.error) throw targetPostTagRequest.error.value;
+		if (targetPostTypeRequest.error) throw targetPostTypeRequest.error.value;
 
-		if (targetPostTagRequest.status !== 200) return null;
+		if (targetPostTypeRequest.status !== 200) return null;
 
-		return targetPostTagRequest.data;
+		return targetPostTypeRequest.data;
+	}
+
+	async findBySlug(slug: string): Promise<IUnmountedPostType | null> {
+		const targetPostTypeRequest = await this.postTagTypeService["by-slug"]({
+			slug,
+		}).get();
+
+		if (targetPostTypeRequest.error) throw targetPostTypeRequest.error.value;
+
+		if (targetPostTypeRequest.status !== 200) return null;
+
+		return targetPostTypeRequest.data;
 	}
 }

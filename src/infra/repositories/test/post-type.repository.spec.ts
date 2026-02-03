@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { faker } from "@faker-js/faker";
 import { PostTypeRepository } from "./post-type.repository";
 import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
+import { Schema, t } from "@caffeine/models";
 
 describe("PostTypeRepository", () => {
 	let repository: PostTypeRepository;
@@ -15,8 +16,10 @@ describe("PostTypeRepository", () => {
 		id: faker.string.uuid(),
 		name: faker.lorem.word(),
 		slug: faker.helpers.slugify(faker.lorem.words(2)),
-		createdAt: faker.date.past(),
-		updatedAt: faker.date.recent(),
+		createdAt: faker.date.past().toISOString(),
+		updatedAt: faker.date.recent().toISOString(),
+		schema: Schema.make(t.Object({ name: t.String() })).toString(),
+		isHighlighted: true,
 		...overrides,
 	});
 
@@ -68,6 +71,69 @@ describe("PostTypeRepository", () => {
 				createdAt: type.createdAt,
 				updatedAt: type.updatedAt,
 			});
+		});
+	});
+
+	describe("findBySlug()", () => {
+		it("deve encontrar um tipo por slug", async () => {
+			// Arrange
+			const type = makeValidPostTypeData({ slug: "artigo-teste" });
+			repository.seed([type]);
+
+			// Act
+			const found = await repository.findBySlug("artigo-teste");
+
+			// Assert
+			expect(found).not.toBeNull();
+			expect(found?.slug).toBe("artigo-teste");
+			expect(found?.id).toBe(type.id);
+		});
+
+		it("deve retornar null quando tipo não existe", async () => {
+			// Arrange
+			const nonExistentSlug = "slug-inexistente";
+
+			// Act
+			const found = await repository.findBySlug(nonExistentSlug);
+
+			// Assert
+			expect(found).toBeNull();
+		});
+
+		it("deve retornar o tipo com todas as propriedades", async () => {
+			// Arrange
+			const type = makeValidPostTypeData({ slug: "tutorial" });
+			repository.seed([type]);
+
+			// Act
+			const found = await repository.findBySlug("tutorial");
+
+			// Assert
+			expect(found).toMatchObject({
+				id: type.id,
+				name: type.name,
+				slug: type.slug,
+				createdAt: type.createdAt,
+				updatedAt: type.updatedAt,
+			});
+		});
+
+		it("deve encontrar o tipo correto quando há múltiplos tipos", async () => {
+			// Arrange
+			const types = [
+				makeValidPostTypeData({ slug: "artigo" }),
+				makeValidPostTypeData({ slug: "tutorial" }),
+				makeValidPostTypeData({ slug: "video" }),
+			];
+			repository.seed(types);
+
+			// Act
+			const found = await repository.findBySlug("tutorial");
+
+			// Assert
+			expect(found).not.toBeNull();
+			expect(found?.slug).toBe("tutorial");
+			expect(found?.id).toBe(types[1]?.id);
 		});
 	});
 
