@@ -16,8 +16,8 @@ export class CreatePostUseCase {
 
 	public constructor(
 		private readonly repository: IPostRepository,
-		readonly postTagRepository: IPostTagRepository,
-		readonly postTypeRepository: IPostTypeRepository,
+		private readonly postTagRepository: IPostTagRepository,
+		private readonly postTypeRepository: IPostTypeRepository,
 	) {
 		this.findPostTags = new FindPostTagsService(postTagRepository);
 		this.findPostTypeById = new FindPostTypeByIdService(postTypeRepository);

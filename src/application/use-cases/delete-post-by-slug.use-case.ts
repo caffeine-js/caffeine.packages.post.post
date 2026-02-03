@@ -1,0 +1,17 @@
+import { BuildPost } from "@/domain/services/build-post.service";
+import type { IPostRepository } from "@/domain/types/post-repository.interface";
+import { ResourceNotFoundException } from "@caffeine/errors/application";
+
+export class DeletePostBySlugUseCase {
+	public constructor(private readonly repository: IPostRepository) {}
+
+	public async run(slug: string): Promise<void> {
+		const _targetPost = await this.repository.findBySlug(slug);
+
+		if (!_targetPost) throw new ResourceNotFoundException(`post@post`);
+
+		const targetPost = BuildPost.run(_targetPost);
+
+		await this.repository.delete(targetPost);
+	}
+}

@@ -4,7 +4,7 @@ import type { IPostTypeRepository } from "@/domain/types/post-type-repository.in
 import type { ICompletePost } from "../types/complete-post.interface";
 import { FindPostTagsService } from "../services/find-post-tags.service";
 import type { IUnmountedPostTag } from "@caffeine-packages/post.post-tag/domain/types";
-import { ResourceNotFoundException } from "@caffeine/errors/application";
+
 import { FindPostTypeBySlugService } from "../services/find-post-type-by-slug.service";
 import type { FindManyPostsByPostTypeDTO } from "../dtos/find-many-posts-by-post-type.dto";
 
@@ -14,8 +14,8 @@ export class FindManyPostsByPostTypeUseCase {
 
 	public constructor(
 		private readonly repository: IPostRepository,
-		readonly postTypeRepository: IPostTypeRepository,
-		readonly postTagRepository: IPostTagRepository,
+		private readonly postTypeRepository: IPostTypeRepository,
+		private readonly postTagRepository: IPostTagRepository,
 	) {
 		this.findPostTags = new FindPostTagsService(postTagRepository);
 		this.findPostTypeBySlug = new FindPostTypeBySlugService(postTypeRepository);
@@ -40,14 +40,7 @@ export class FindManyPostsByPostTypeUseCase {
 		return posts.map((post) => {
 			const { tags: tagIds, postTypeId, ...properties } = post;
 
-			const tags = tagIds.map((tag) => {
-				const value = postTags[tag];
-
-				if (!value)
-					throw new ResourceNotFoundException(`post@post::tags->${tag}`);
-
-				return value;
-			});
+			const tags = tagIds.map((tag) => postTags[tag]!);
 
 			return {
 				...properties,

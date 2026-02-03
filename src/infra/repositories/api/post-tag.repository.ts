@@ -8,9 +8,9 @@ export class PostTagRepository implements IPostTagRepository {
 		process.env.POST_BASE_URL,
 	)["post-tag"];
 
-	async findById(slug: string): Promise<IUnmountedPostTag | null> {
-		const targetPostTagRequest = await this.postTagService["by-slug"]({
-			slug,
+	async findById(id: string): Promise<IUnmountedPostTag | null> {
+		const targetPostTagRequest = await this.postTagService({
+			id,
 		}).get();
 
 		if (targetPostTagRequest.error) throw targetPostTagRequest.error.value;

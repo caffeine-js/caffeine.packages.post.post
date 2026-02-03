@@ -12,8 +12,8 @@ export class FindPostBySlugUseCase {
 
 	public constructor(
 		private readonly repository: IPostRepository,
-		readonly postTypeRepository: IPostTypeRepository,
-		readonly postTagRepository: IPostTagRepository,
+		private readonly postTypeRepository: IPostTypeRepository,
+		private readonly postTagRepository: IPostTagRepository,
 	) {
 		this.findPostTags = new FindPostTagsService(postTagRepository);
 		this.findPostTypeById = new FindPostTypeByIdService(postTypeRepository);

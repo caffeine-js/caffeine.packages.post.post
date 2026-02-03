@@ -2,14 +2,6 @@ import { t } from "@caffeine/models";
 
 export const UpdatePostDTO = t.Object(
 	{
-		postTypeId: t.Optional(
-			t.String({
-				format: "uuid",
-				description:
-					"The unique identifier of the post type that categorizes this post.",
-				examples: ["550e8400-e29b-41d4-a716-446655440000"],
-			}),
-		),
 		tags: t.Optional(
 			t.Array(
 				t.String({

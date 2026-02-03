@@ -5,7 +5,7 @@ import { FindPostTagByIdService } from "./find-post-tag-by-id.service";
 export class FindPostTagsService {
 	private readonly findById: FindPostTagByIdService;
 
-	public constructor(readonly repository: IPostTagRepository) {
+	public constructor(private readonly repository: IPostTagRepository) {
 		this.findById = new FindPostTagByIdService(repository);
 	}
 

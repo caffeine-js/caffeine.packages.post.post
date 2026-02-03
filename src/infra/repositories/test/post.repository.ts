@@ -1,4 +1,4 @@
-import type { PostType } from "@caffeine-packages/post.post-type/domain";
+import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
 import type { Post } from "../../../domain/post";
 import type { IPostRepository } from "../../../domain/types/post-repository.interface";
 import type { IUnmountedPost } from "../../../domain/types/unmounted-post.interface";
@@ -73,7 +73,7 @@ export class PostRepository implements IPostRepository {
 	 * @returns Array de posts do tipo especificado na página solicitada
 	 */
 	async findManyByPostType(
-		postType: PostType,
+		postType: IUnmountedPostType,
 		page: number,
 	): Promise<IUnmountedPost[]> {
 		const filteredPosts = Array.from(this.posts.values()).filter(

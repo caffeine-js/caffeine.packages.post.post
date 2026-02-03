@@ -19,7 +19,7 @@ This project was created using `bun init` in bun v1.3.8. [Bun](https://bun.com) 
 - [x] [ ] [GET] /post/by-slug/:slug
 - [x] [ ] [GET] /post/by-post-type/:post-type?page=NUMBER
 - [x] [ ] [GET] /post?page=NUMBER
-- [ ] [ ] [PATCH]* /post/by-slug/:slug
-- [ ] [ ] [DELETE]* /post/by-slug/:slug
+- [x] [ ] [PATCH]* /post/by-slug/:slug
+- [x] [ ] [DELETE]* /post/by-slug/:slug
 - [x] [ ] [GET] /post/number-of-pages
 - [x] [ ] [GET] /post/length
