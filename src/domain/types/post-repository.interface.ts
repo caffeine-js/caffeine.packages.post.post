@@ -1,17 +1,16 @@
-import type { Post } from "../post";
-import type { IUnmountedPost } from "./unmounted-post.interface";
+import type { IPost } from "./post.interface";
 import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
 
 export interface IPostRepository {
-	create(post: Post): Promise<void>;
-	findById(id: string): Promise<IUnmountedPost | null>;
-	findBySlug(slug: string): Promise<IUnmountedPost | null>;
-	findMany(page: number): Promise<IUnmountedPost[]>;
+	create(post: IPost): Promise<void>;
+	findById(id: string): Promise<IPost | null>;
+	findBySlug(slug: string): Promise<IPost | null>;
+	findMany(page: number): Promise<IPost[]>;
 	findManyByPostType(
 		postType: IUnmountedPostType,
 		page: number,
-	): Promise<IUnmountedPost[]>;
-	update(post: Post): Promise<void>;
-	delete(post: Post): Promise<void>;
+	): Promise<IPost[]>;
+	update(post: IPost): Promise<void>;
+	delete(post: IPost): Promise<void>;
 	length(): Promise<number>;
 }

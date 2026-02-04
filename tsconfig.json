@@ -27,8 +27,7 @@
 		"noPropertyAccessFromIndexSignature": false,
 
 		"paths": {
-			"@/*": ["./src/*"],
-			"t/*": ["./test/*"]
+			"@/*": ["./src/*"]
 		}
 	}
 }

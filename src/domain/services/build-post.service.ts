@@ -1,11 +1,11 @@
-import { Schema } from "@caffeine/models";
+import { Schema } from "@caffeine/models/schema";
 import { UnmountedPostDTO } from "../dtos/unmounted-post.dto";
 import { Post } from "../post";
-import type { IUnmountedPost } from "../types";
+import type { IPost, IUnmountedPost } from "../types";
 import { InvalidDomainDataException } from "@caffeine/errors/domain";
 
 export const BuildPost = {
-	run: (unmountedPostTag: IUnmountedPost): Post => {
+	run: (unmountedPostTag: IUnmountedPost): IPost => {
 		if (!Schema.make(UnmountedPostDTO).match(unmountedPostTag))
 			throw new InvalidDomainDataException("post@post::unmount");
 

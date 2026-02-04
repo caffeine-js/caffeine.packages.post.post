@@ -1,7 +1,8 @@
 import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
-import type { Post } from "../../../domain/post";
+import { Post } from "../../../domain/post";
 import type { IPostRepository } from "../../../domain/types/post-repository.interface";
 import type { IUnmountedPost } from "../../../domain/types/unmounted-post.interface";
+import type { IPost } from "../../../domain/types/post.interface";
 
 /**
  * Repositório InMemory para testes da entidade Post.
@@ -23,8 +24,18 @@ export class PostRepository implements IPostRepository {
 	 * @param post - Instância de Post a ser criada
 	 * @throws Error se já existe um post com o mesmo ID
 	 */
-	async create(post: Post): Promise<void> {
-		const unpacked = post.unpack();
+	async create(post: IPost): Promise<void> {
+		const unpacked: IUnmountedPost = {
+			id: post.id,
+			createdAt: post.createdAt,
+			updatedAt: post.updatedAt,
+			postTypeId: post.postTypeId,
+			name: post.name,
+			slug: post.slug,
+			description: post.description,
+			cover: post.cover,
+			tags: post.tags,
+		};
 
 		if (this.posts.has(unpacked.id)) {
 			throw new Error(`Post com ID ${unpacked.id} já existe`);
@@ -38,8 +49,10 @@ export class PostRepository implements IPostRepository {
 	 * @param id - ID do post
 	 * @returns Post encontrado ou null se não existir
 	 */
-	async findById(id: string): Promise<IUnmountedPost | null> {
-		return this.posts.get(id) ?? null;
+	async findById(id: string): Promise<IPost | null> {
+		const raw = this.posts.get(id);
+		if (!raw) return null;
+		return this.hydrate(raw);
 	}
 
 	/**
@@ -47,10 +60,10 @@ export class PostRepository implements IPostRepository {
 	 * @param slug - Slug do post
 	 * @returns Post encontrado ou null se não existir
 	 */
-	async findBySlug(slug: string): Promise<IUnmountedPost | null> {
+	async findBySlug(slug: string): Promise<IPost | null> {
 		for (const post of this.posts.values()) {
 			if (post.slug === slug) {
-				return post;
+				return this.hydrate(post);
 			}
 		}
 		return null;
@@ -61,9 +74,10 @@ export class PostRepository implements IPostRepository {
 	 * @param page - Número da página (começa em 1)
 	 * @returns Array de posts da página solicitada
 	 */
-	async findMany(page: number): Promise<IUnmountedPost[]> {
+	async findMany(page: number): Promise<IPost[]> {
 		const allPosts = Array.from(this.posts.values());
-		return this.paginate(allPosts, page);
+		const paginatedCalls = this.paginate(allPosts, page);
+		return paginatedCalls.map((p) => this.hydrate(p));
 	}
 
 	/**
@@ -75,11 +89,12 @@ export class PostRepository implements IPostRepository {
 	async findManyByPostType(
 		postType: IUnmountedPostType,
 		page: number,
-	): Promise<IUnmountedPost[]> {
+	): Promise<IPost[]> {
 		const filteredPosts = Array.from(this.posts.values()).filter(
 			(post) => post.postTypeId === postType.id,
 		);
-		return this.paginate(filteredPosts, page);
+		const paginated = this.paginate(filteredPosts, page);
+		return paginated.map((p) => this.hydrate(p));
 	}
 
 	/**
@@ -87,8 +102,18 @@ export class PostRepository implements IPostRepository {
 	 * @param post - Instância de Post com dados atualizados
 	 * @throws Error se o post não existe
 	 */
-	async update(post: Post): Promise<void> {
-		const unpacked = post.unpack();
+	async update(post: IPost): Promise<void> {
+		const unpacked: IUnmountedPost = {
+			id: post.id,
+			createdAt: post.createdAt,
+			updatedAt: post.updatedAt,
+			postTypeId: post.postTypeId,
+			name: post.name,
+			slug: post.slug,
+			description: post.description,
+			cover: post.cover,
+			tags: post.tags,
+		};
 
 		if (!this.posts.has(unpacked.id)) {
 			throw new Error(`Post com ID ${unpacked.id} não encontrado`);
@@ -102,14 +127,12 @@ export class PostRepository implements IPostRepository {
 	 * @param post - Instância de Post a ser removida
 	 * @throws Error se o post não existe
 	 */
-	async delete(post: Post): Promise<void> {
-		const unpacked = post.unpack();
-
-		if (!this.posts.has(unpacked.id)) {
-			throw new Error(`Post com ID ${unpacked.id} não encontrado`);
+	async delete(post: IPost): Promise<void> {
+		if (!this.posts.has(post.id)) {
+			throw new Error(`Post com ID ${post.id} não encontrado`);
 		}
 
-		this.posts.delete(unpacked.id);
+		this.posts.delete(post.id);
 	}
 
 	/**
@@ -147,5 +170,23 @@ export class PostRepository implements IPostRepository {
 	 */
 	getAll(): IUnmountedPost[] {
 		return Array.from(this.posts.values());
+	}
+
+	private hydrate(raw: IUnmountedPost): IPost {
+		return Post.make(
+			{
+				name: raw.name,
+				description: raw.description,
+				slug: raw.slug,
+				cover: raw.cover,
+				postTypeId: raw.postTypeId,
+				tags: raw.tags,
+			},
+			{
+				id: raw.id,
+				createdAt: raw.createdAt,
+				updatedAt: raw.updatedAt,
+			},
+		);
 	}
 }

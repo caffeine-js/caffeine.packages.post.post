@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { faker } from "@faker-js/faker";
 import { PostRepository } from "./post.repository";
-import { Post } from "../../../domain/post";
-import type { BuildPostDTO } from "../../../domain/dtos/build-post.dto";
+import { Post } from "@/domain/post";
+import type { BuildPostDTO } from "@/domain/dtos/build-post.dto";
 import { makeEntityFactory } from "@caffeine/models/factories";
 
 describe("PostRepository", () => {
@@ -143,6 +143,20 @@ describe("PostRepository", () => {
 
 			// Act
 			const found = await repository.findBySlug(nonExistentSlug);
+
+			// Assert
+			expect(found).toBeNull();
+		});
+
+		it("deve retornar null quando slug não existe mesmo com outros posts", async () => {
+			// Arrange
+			const post1 = Post.make(makeValidPostData({ slug: "slug-1" }));
+			const post2 = Post.make(makeValidPostData({ slug: "slug-2" }));
+			await repository.create(post1);
+			await repository.create(post2);
+
+			// Act
+			const found = await repository.findBySlug("slug-inexistente");
 
 			// Assert
 			expect(found).toBeNull();
