@@ -3,7 +3,7 @@ import { PostRoutes } from "..";
 import openapi from "@elysiajs/openapi";
 
 new Elysia()
-	.use(openapi({ path: "/docs" }))
+	.use(openapi({ path: "/docs", scalar: { showDeveloperTools: "never" } }))
 	.use(PostRoutes)
 	.listen(8080, () => {
 		console.log(`🦊 server is running at: http://localhost:8080`);
