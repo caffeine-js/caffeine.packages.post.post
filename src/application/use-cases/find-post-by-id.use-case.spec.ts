@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { FindPostByIdUseCase } from "./find-post-by-id.use-case";
+import { FindPostTagsService } from "../services/find-post-tags.service";
+import { FindPostTypeByIdService } from "../services/find-post-type-by-id.service";
+import { PopulatePostService } from "../services/populate-post.service";
 import { PostRepository } from "../../infra/repositories/test/post.repository";
 import { PostTagRepository } from "../../infra/repositories/test/post-tag.repository";
 import { PostTypeRepository } from "../../infra/repositories/test/post-type.repository";
@@ -22,10 +25,12 @@ describe("FindPostByIdUseCase", () => {
 		postTagRepository = new PostTagRepository();
 		postTypeRepository = new PostTypeRepository();
 
+		const findPostTags = new FindPostTagsService(postTagRepository);
+		const findPostTypeById = new FindPostTypeByIdService(postTypeRepository);
+
 		useCase = new FindPostByIdUseCase(
 			postRepository,
-			postTypeRepository, // Start with Type repo per constructor
-			postTagRepository,
+			new PopulatePostService(findPostTags, findPostTypeById),
 		);
 	});
 

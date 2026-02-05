@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { FindManyPostsByPostTypeUseCase } from "./find-many-posts-by-post-type.use-case";
+import { FindPostTagsService } from "../services/find-post-tags.service";
+import { FindPostTypeBySlugService } from "../services/find-post-type-by-slug.service";
+import { FindPostTypesService } from "../services/find-post-types.service";
+import { PopulateManyPostsService } from "../services/populate-many-posts.service";
 import { PostRepository } from "../../infra/repositories/test/post.repository";
 import { PostTagRepository } from "../../infra/repositories/test/post-tag.repository";
 import { PostTypeRepository } from "../../infra/repositories/test/post-type.repository";
@@ -20,10 +24,16 @@ describe("FindManyPostsByPostTypeUseCase", () => {
 		postTagRepository = new PostTagRepository();
 		postTypeRepository = new PostTypeRepository();
 
+		const findPostTags = new FindPostTagsService(postTagRepository);
+		const findPostTypeBySlug = new FindPostTypeBySlugService(
+			postTypeRepository,
+		);
+		const findPostTypes = new FindPostTypesService(postTypeRepository);
+
 		useCase = new FindManyPostsByPostTypeUseCase(
 			postRepository,
-			postTypeRepository,
-			postTagRepository,
+			findPostTypeBySlug,
+			new PopulateManyPostsService(findPostTags, findPostTypes),
 		);
 	});
 

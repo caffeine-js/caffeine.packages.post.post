@@ -13,6 +13,7 @@ import { ResourceNotFoundException } from "@caffeine/errors/application";
 
 import { FindPostTagsService } from "../services/find-post-tags.service";
 import { FindPostTypesService } from "../services/find-post-types.service";
+import { PopulateManyPostsService } from "../services/populate-many-posts.service";
 
 describe("FindManyPostsUseCase", () => {
 	let useCase: FindManyPostsUseCase;
@@ -27,8 +28,10 @@ describe("FindManyPostsUseCase", () => {
 
 		useCase = new FindManyPostsUseCase(
 			postRepository,
-			new FindPostTagsService(postTagRepository),
-			new FindPostTypesService(postTypeRepository),
+			new PopulateManyPostsService(
+				new FindPostTagsService(postTagRepository),
+				new FindPostTypesService(postTypeRepository),
+			),
 		);
 	});
 

@@ -13,6 +13,7 @@ import { generateUUID } from "@caffeine/models/helpers";
 
 import { FindPostTagsService } from "../services/find-post-tags.service";
 import { FindPostTypeByIdService } from "../services/find-post-type-by-id.service";
+import { PopulatePostService } from "../services/populate-post.service";
 
 describe("FindPostBySlugUseCase", () => {
 	let useCase: FindPostBySlugUseCase;
@@ -27,8 +28,10 @@ describe("FindPostBySlugUseCase", () => {
 
 		useCase = new FindPostBySlugUseCase(
 			postRepository,
-			new FindPostTagsService(postTagRepository),
-			new FindPostTypeByIdService(postTypeRepository),
+			new PopulatePostService(
+				new FindPostTagsService(postTagRepository),
+				new FindPostTypeByIdService(postTypeRepository),
+			),
 		);
 	});
 

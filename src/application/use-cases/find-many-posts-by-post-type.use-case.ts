@@ -1,26 +1,15 @@
 import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
-import type { IPostTagRepository } from "@/domain/types/repositories/post-tag-repository.interface";
-import type { IPostTypeRepository } from "@/domain/types/repositories/post-type-repository.interface";
 import type { ICompletePost } from "../types/complete-post.interface";
-import { FindPostTagsService } from "../services/find-post-tags.service";
-import type { IUnmountedPostTag } from "@caffeine-packages/post.post-tag/domain/types";
-
-import { FindPostTypeBySlugService } from "../services/find-post-type-by-slug.service";
+import type { PopulateManyPostsService } from "../services/populate-many-posts.service";
+import type { FindPostTypeBySlugService } from "../services/find-post-type-by-slug.service";
 import type { FindManyPostsByPostTypeDTO } from "../dtos/find-many-posts-by-post-type.dto";
-import { UnpackPost } from "@/domain/services";
 
 export class FindManyPostsByPostTypeUseCase {
-	private readonly findPostTags: FindPostTagsService;
-	private readonly findPostTypeBySlug: FindPostTypeBySlugService;
-
 	public constructor(
 		private readonly repository: IPostRepository,
-		private readonly postTypeRepository: IPostTypeRepository,
-		private readonly postTagRepository: IPostTagRepository,
-	) {
-		this.findPostTags = new FindPostTagsService(postTagRepository);
-		this.findPostTypeBySlug = new FindPostTypeBySlugService(postTypeRepository);
-	}
+		private readonly findPostTypeBySlug: FindPostTypeBySlugService,
+		private readonly populateManyPosts: PopulateManyPostsService,
+	) {}
 
 	public async run({
 		page,
@@ -29,25 +18,8 @@ export class FindManyPostsByPostTypeUseCase {
 		const postType = await this.findPostTypeBySlug.run(_postType);
 		const posts = await this.repository.findManyByPostType(postType.id, page);
 
-		const postTagsIds = [...new Set(posts.flatMap((post) => post.tags))];
-
-		const postTags: Record<string, IUnmountedPostTag> = Object.fromEntries(
-			(await this.findPostTags.run(postTagsIds)).map((postTag) => [
-				postTag.id,
-				postTag,
-			]),
-		);
-
-		return posts.map((post) => {
-			const { tags: tagIds, postTypeId, ...properties } = UnpackPost.run(post);
-
-			const tags = tagIds.map((tag) => postTags[tag]!);
-
-			return {
-				...properties,
-				postType,
-				tags,
-			};
-		});
+		// Note: We already have 'postType', but delegating to populateManyPosts ensures consistency
+		// and centralized logic for hydration, even if it might re-fetch the type by ID.
+		return await this.populateManyPosts.run(posts);
 	}
 }

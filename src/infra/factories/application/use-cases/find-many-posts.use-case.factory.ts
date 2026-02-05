@@ -5,14 +5,16 @@ import { makePostRepository } from "../../repositories/post.repository.factory";
 
 import { FindPostTagsService } from "@/application/services/find-post-tags.service";
 import { FindPostTypesService } from "@/application/services/find-post-types.service";
-
+import { PopulateManyPostsService } from "@/application/services/populate-many-posts.service";
 export function makeFindManyPostsUseCase(): FindManyPostsUseCase {
 	const postTagRepository = new PostTagRepository();
 	const postTypeRepository = new PostTypeRepository();
 
+	const findPostTagsService = new FindPostTagsService(postTagRepository);
+	const findPostTypesService = new FindPostTypesService(postTypeRepository);
+
 	return new FindManyPostsUseCase(
 		makePostRepository(),
-		new FindPostTagsService(postTagRepository),
-		new FindPostTypesService(postTypeRepository),
+		new PopulateManyPostsService(findPostTagsService, findPostTypesService),
 	);
 }

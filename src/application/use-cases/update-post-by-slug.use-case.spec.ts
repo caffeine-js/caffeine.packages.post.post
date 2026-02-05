@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import { UpdatePostBySlugUseCase } from "./update-post-by-slug.use-case";
+import { PopulatePostService } from "../services/populate-post.service";
 import { PostRepository } from "@/infra/repositories/test/post.repository";
 import { PostTagRepository } from "@/infra/repositories/test/post-tag.repository";
 import { PostTypeRepository } from "@/infra/repositories/test/post-type.repository";
@@ -73,9 +74,11 @@ describe("UpdatePostBySlugUseCase", () => {
 
 		useCase = new UpdatePostBySlugUseCase(
 			postRepository,
-			new FindPostTagsService(postTagRepository),
-			new FindPostTypeByIdService(postTypeRepository),
 			new PostUniquenessChecker(postRepository),
+			new PopulatePostService(
+				new FindPostTagsService(postTagRepository),
+				new FindPostTypeByIdService(postTypeRepository),
+			),
 		);
 	});
 
