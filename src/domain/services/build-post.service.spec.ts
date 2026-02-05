@@ -4,12 +4,12 @@ import { generateUUID } from "@caffeine/models/helpers";
 import { InvalidDomainDataException } from "@caffeine/errors/domain";
 
 import { BuildPost } from "./build-post.service";
-import type { UnmountedPostDTO } from "../dtos/unmounted-post.dto";
 import { Post } from "../post";
+import type { IUnpackedPost } from "../types";
 
 describe("BuildPost", () => {
 	it("should build a post successfully with valid data", () => {
-		const validData: UnmountedPostDTO = {
+		const validData: IUnpackedPost = {
 			id: generateUUID(),
 			postTypeId: generateUUID(),
 			name: "Valid Post Name",
@@ -40,7 +40,7 @@ describe("BuildPost", () => {
 			slug: "invalid-post",
 			description: "Missing required fields",
 			updatedAt: new Date().toISOString(),
-		} as unknown as UnmountedPostDTO;
+		} as unknown as IUnpackedPost;
 
 		expect(() => BuildPost.run(invalidData)).toThrow(
 			InvalidDomainDataException,
