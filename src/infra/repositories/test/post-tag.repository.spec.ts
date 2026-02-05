@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { faker } from "@faker-js/faker";
 import { PostTagRepository } from "./post-tag.repository";
 import type { IUnmountedPostTag } from "@caffeine-packages/post.post-tag/domain/types";
+import { generateUUID } from "@caffeine/models/helpers";
+import { makeEntityFactory } from "@caffeine/models/factories";
 
 describe("PostTagRepository", () => {
 	let repository: PostTagRepository;
@@ -12,11 +14,10 @@ describe("PostTagRepository", () => {
 	const makeValidPostTagData = (
 		overrides: Partial<IUnmountedPostTag> = {},
 	): IUnmountedPostTag => ({
-		id: faker.string.uuid(),
+		...makeEntityFactory(),
 		name: faker.lorem.word(),
 		slug: faker.helpers.slugify(faker.lorem.words(2)),
-		createdAt: faker.date.past(),
-		updatedAt: faker.date.recent(),
+		hidden: true,
 		...overrides,
 	});
 
@@ -43,7 +44,7 @@ describe("PostTagRepository", () => {
 
 		it("deve retornar null quando tag não existe", async () => {
 			// Arrange
-			const nonExistentId = faker.string.uuid();
+			const nonExistentId = generateUUID();
 
 			// Act
 			const found = await repository.findById(nonExistentId);
@@ -89,7 +90,7 @@ describe("PostTagRepository", () => {
 
 		it("deve sobrescrever tag existente com mesmo ID", () => {
 			// Arrange
-			const id = faker.string.uuid();
+			const id = generateUUID();
 			const tag1 = makeValidPostTagData({ id, name: "Original" });
 			const tag2 = makeValidPostTagData({ id, name: "Atualizada" });
 

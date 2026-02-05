@@ -1,8 +1,7 @@
+import { Post } from "@/domain";
+import type { IPost, IUnmountedPost } from "@/domain/types";
+import type { IPostRepository } from "@/domain/types/post-repository.interface";
 import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
-import { Post } from "../../../domain/post";
-import type { IPostRepository } from "../../../domain/types/post-repository.interface";
-import type { IUnmountedPost } from "../../../domain/types/unmounted-post.interface";
-import type { IPost } from "../../../domain/types/post.interface";
 
 /**
  * Repositório InMemory para testes da entidade Post.

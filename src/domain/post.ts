@@ -1,13 +1,14 @@
 import { Entity } from "@caffeine/models";
-import type { IPost } from "./types";
-import { BuildPostDTO } from "./dtos/build-post.dto";
 import type { EntityDTO } from "@caffeine/models/dtos";
 import { InvalidDomainDataException } from "@caffeine/errors/domain";
 import { makeEntityFactory } from "@caffeine/models/factories";
 import { slugify } from "@caffeine/models/helpers";
 import { Schema } from "@caffeine/models/schema";
-import { StringDTO } from "@caffeine/models/dtos/primitives";
-import {} from "@caffeine/errors/domain";
+import { StringDTO, UrlDTO } from "@caffeine/models/dtos/primitives";
+import { InvalidPropertyException } from "@caffeine/errors/domain";
+import { BuildPostDTO } from "./dtos/build-post.dto";
+import { TagsDTO } from "./dtos/tags.dto";
+import type { IPost } from "./types";
 
 export class Post extends Entity implements IPost {
 	public postTypeId: string;
@@ -32,8 +33,8 @@ export class Post extends Entity implements IPost {
 	}
 
 	rename(value: string): void {
-		// if (!Schema.make(StringDTO).match(value))
-		// 	throw new
+		if (!Schema.make(StringDTO).match(value))
+			throw new InvalidPropertyException("name", "post@post");
 
 		this.name = value;
 		this.slug = slugify(value);
@@ -41,16 +42,25 @@ export class Post extends Entity implements IPost {
 	}
 
 	updateDescription(value: string): void {
+		if (!Schema.make(StringDTO).match(value))
+			throw new InvalidPropertyException("description", "post@post");
+
 		this.description = value;
 		this.update();
 	}
 
 	updateCover(value: string): void {
+		if (!Schema.make(UrlDTO).match(value))
+			throw new InvalidPropertyException("cover", "post@post");
+
 		this.cover = value;
 		this.update();
 	}
 
 	updateTags(values: string[]): void {
+		if (!Schema.make(TagsDTO).match(values))
+			throw new InvalidPropertyException("tags", "post@post");
+
 		this.tags = values;
 		this.update();
 	}

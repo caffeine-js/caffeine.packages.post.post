@@ -2,7 +2,10 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { faker } from "@faker-js/faker";
 import { PostTypeRepository } from "./post-type.repository";
 import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
-import { Schema, t } from "@caffeine/models";
+import { t } from "@caffeine/models";
+import { Schema } from "@caffeine/models/schema";
+import { generateUUID } from "@caffeine/models/helpers";
+import { makeEntityFactory } from "@caffeine/models/factories";
 
 describe("PostTypeRepository", () => {
 	let repository: PostTypeRepository;
@@ -13,11 +16,9 @@ describe("PostTypeRepository", () => {
 	const makeValidPostTypeData = (
 		overrides: Partial<IUnmountedPostType> = {},
 	): IUnmountedPostType => ({
-		id: faker.string.uuid(),
+		...makeEntityFactory(),
 		name: faker.lorem.word(),
 		slug: faker.helpers.slugify(faker.lorem.words(2)),
-		createdAt: faker.date.past().toISOString(),
-		updatedAt: faker.date.recent().toISOString(),
 		schema: Schema.make(t.Object({ name: t.String() })).toString(),
 		isHighlighted: true,
 		...overrides,
@@ -46,7 +47,7 @@ describe("PostTypeRepository", () => {
 
 		it("deve retornar null quando tipo não existe", async () => {
 			// Arrange
-			const nonExistentId = faker.string.uuid();
+			const nonExistentId = generateUUID();
 
 			// Act
 			const found = await repository.findById(nonExistentId);
@@ -155,7 +156,7 @@ describe("PostTypeRepository", () => {
 
 		it("deve sobrescrever tipo existente com mesmo ID", () => {
 			// Arrange
-			const id = faker.string.uuid();
+			const id = generateUUID();
 			const type1 = makeValidPostTypeData({ id, name: "Original" });
 			const type2 = makeValidPostTypeData({ id, name: "Atualizado" });
 
