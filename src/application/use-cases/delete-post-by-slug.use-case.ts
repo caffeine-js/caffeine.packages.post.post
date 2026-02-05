@@ -1,5 +1,5 @@
 import { BuildPost } from "@/domain/services/build-post.service";
-import type { IPostRepository } from "@/domain/types/post-repository.interface";
+import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
 import { ResourceNotFoundException } from "@caffeine/errors/application";
 
 export class DeletePostBySlugUseCase {

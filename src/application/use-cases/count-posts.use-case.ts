@@ -1,4 +1,4 @@
-import type { IPostRepository } from "@/domain/types/post-repository.interface";
+import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
 
 export class CountPostsUseCase {
 	public constructor(private readonly repository: IPostRepository) {}

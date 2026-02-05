@@ -1,7 +1,6 @@
 import { Post } from "@/domain";
 import type { IPost, IUnmountedPost } from "@/domain/types";
-import type { IPostRepository } from "@/domain/types/post-repository.interface";
-import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
+import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
 
 /**
  * Repositório InMemory para testes da entidade Post.
@@ -85,12 +84,9 @@ export class PostRepository implements IPostRepository {
 	 * @param page - Número da página (começa em 1)
 	 * @returns Array de posts do tipo especificado na página solicitada
 	 */
-	async findManyByPostType(
-		postType: IUnmountedPostType,
-		page: number,
-	): Promise<IPost[]> {
+	async findManyByPostType(postTypeId: string, page: number): Promise<IPost[]> {
 		const filteredPosts = Array.from(this.posts.values()).filter(
-			(post) => post.postTypeId === postType.id,
+			(post) => post.postTypeId === postTypeId,
 		);
 		const paginated = this.paginate(filteredPosts, page);
 		return paginated.map((p) => this.hydrate(p));
@@ -138,7 +134,7 @@ export class PostRepository implements IPostRepository {
 	 * Retorna o número total de posts no repositório
 	 * @returns Quantidade de posts armazenados
 	 */
-	async length(): Promise<number> {
+	async count(): Promise<number> {
 		return this.posts.size;
 	}
 

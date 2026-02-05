@@ -1,4 +1,4 @@
-import type { IPostTypeRepository } from "@/domain/types/post-type-repository.interface";
+import type { IPostTypeRepository } from "@/domain/types/repositories/post-type-repository.interface";
 import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
 
 /**
@@ -58,7 +58,7 @@ export class PostTypeRepository implements IPostTypeRepository {
 	 * Retorna o número total de tipos no repositório
 	 * @returns Quantidade de tipos armazenados
 	 */
-	length(): number {
+	count(): number {
 		return this.types.size;
 	}
 }

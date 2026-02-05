@@ -151,7 +151,7 @@ describe("PostTypeRepository", () => {
 			repository.seed(types);
 
 			// Assert
-			expect(repository.length()).toBe(3);
+			expect(repository.count()).toBe(3);
 		});
 
 		it("deve sobrescrever tipo existente com mesmo ID", () => {
@@ -181,7 +181,7 @@ describe("PostTypeRepository", () => {
 			repository.clear();
 
 			// Assert
-			expect(repository.length()).toBe(0);
+			expect(repository.count()).toBe(0);
 		});
 	});
 
@@ -214,7 +214,7 @@ describe("PostTypeRepository", () => {
 	describe("length()", () => {
 		it("deve retornar 0 para repositório vazio", () => {
 			// Act
-			const length = repository.length();
+			const length = repository.count();
 
 			// Assert
 			expect(length).toBe(0);
@@ -230,7 +230,7 @@ describe("PostTypeRepository", () => {
 			repository.seed(types);
 
 			// Act
-			const length = repository.length();
+			const length = repository.count();
 
 			// Assert
 			expect(length).toBe(3);
@@ -242,16 +242,16 @@ describe("PostTypeRepository", () => {
 			const type2 = makeValidPostTypeData();
 
 			// Act & Assert
-			expect(repository.length()).toBe(0);
+			expect(repository.count()).toBe(0);
 
 			repository.seed([type1]);
-			expect(repository.length()).toBe(1);
+			expect(repository.count()).toBe(1);
 
 			repository.seed([type2]);
-			expect(repository.length()).toBe(2);
+			expect(repository.count()).toBe(2);
 
 			repository.clear();
-			expect(repository.length()).toBe(0);
+			expect(repository.count()).toBe(0);
 		});
 	});
 });

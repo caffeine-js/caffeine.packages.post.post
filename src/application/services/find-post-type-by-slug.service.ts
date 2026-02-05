@@ -1,4 +1,4 @@
-import type { IPostTypeRepository } from "@/domain/types/post-type-repository.interface";
+import type { IPostTypeRepository } from "@/domain/types/repositories/post-type-repository.interface";
 import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
 import { ResourceNotFoundException } from "@caffeine/errors/application";
 

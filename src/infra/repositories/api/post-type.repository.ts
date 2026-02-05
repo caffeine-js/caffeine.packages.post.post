@@ -1,4 +1,4 @@
-import type { IPostTypeRepository } from "@/domain/types/post-type-repository.interface";
+import type { IPostTypeRepository } from "@/domain/types/repositories/post-type-repository.interface";
 import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
 import type { PostTypeRoutes } from "@caffeine-packages/post.post-type/presentation";
 import { treaty } from "@elysiajs/eden";

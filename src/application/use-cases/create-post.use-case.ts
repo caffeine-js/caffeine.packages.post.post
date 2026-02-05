@@ -1,11 +1,11 @@
-import type { IPostRepository } from "@/domain/types/post-repository.interface";
+import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
 import type { CreatePostDTO } from "../dtos/create-post.dto";
 import { PostUniquenessChecker } from "@/domain/services/post-uniqueness-checker.service";
 import { slugify } from "@caffeine/models/helpers";
 import { ResourceAlreadyExistsException } from "@caffeine/errors/application";
 import { Post } from "@/domain/post";
-import type { IPostTagRepository } from "@/domain/types/post-tag-repository.interface";
-import type { IPostTypeRepository } from "@/domain/types/post-type-repository.interface";
+import type { IPostTagRepository } from "@/domain/types/repositories/post-tag-repository.interface";
+import type { IPostTypeRepository } from "@/domain/types/repositories/post-type-repository.interface";
 import type { ICompletePost } from "../types/complete-post.interface";
 import { FindPostTypeByIdService } from "../services/find-post-type-by-id.service";
 import { FindPostTagsService } from "../services/find-post-tags.service";

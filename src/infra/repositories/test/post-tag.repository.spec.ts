@@ -85,7 +85,7 @@ describe("PostTagRepository", () => {
 			repository.seed(tags);
 
 			// Assert
-			expect(repository.length()).toBe(3);
+			expect(repository.count()).toBe(3);
 		});
 
 		it("deve sobrescrever tag existente com mesmo ID", () => {
@@ -115,7 +115,7 @@ describe("PostTagRepository", () => {
 			repository.clear();
 
 			// Assert
-			expect(repository.length()).toBe(0);
+			expect(repository.count()).toBe(0);
 		});
 	});
 
@@ -148,7 +148,7 @@ describe("PostTagRepository", () => {
 	describe("length()", () => {
 		it("deve retornar 0 para repositório vazio", () => {
 			// Act
-			const length = repository.length();
+			const length = repository.count();
 
 			// Assert
 			expect(length).toBe(0);
@@ -164,7 +164,7 @@ describe("PostTagRepository", () => {
 			repository.seed(tags);
 
 			// Act
-			const length = repository.length();
+			const length = repository.count();
 
 			// Assert
 			expect(length).toBe(3);
@@ -176,16 +176,16 @@ describe("PostTagRepository", () => {
 			const tag2 = makeValidPostTagData();
 
 			// Act & Assert
-			expect(repository.length()).toBe(0);
+			expect(repository.count()).toBe(0);
 
 			repository.seed([tag1]);
-			expect(repository.length()).toBe(1);
+			expect(repository.count()).toBe(1);
 
 			repository.seed([tag2]);
-			expect(repository.length()).toBe(2);
+			expect(repository.count()).toBe(2);
 
 			repository.clear();
-			expect(repository.length()).toBe(0);
+			expect(repository.count()).toBe(0);
 		});
 	});
 });

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { CountPostsUseCase } from "./count-posts.use-case";
 import { PostRepository } from "../../infra/repositories/test/post.repository";
 import { Post } from "../../domain/post";
-import type { IPostRepository } from "@/domain/types/post-repository.interface";
+import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
 
 describe("CountPostsUseCase", () => {
 	let useCase: CountPostsUseCase;

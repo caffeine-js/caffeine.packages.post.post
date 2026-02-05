@@ -1,7 +1,7 @@
-import type { IPostRepository } from "@/domain/types/post-repository.interface";
+import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
 import type { UpdatePostDTO } from "../dtos/update-post.dto";
 import type { ICompletePost } from "../types/complete-post.interface";
-import type { IPostTagRepository } from "@/domain/types/post-tag-repository.interface";
+import type { IPostTagRepository } from "@/domain/types/repositories/post-tag-repository.interface";
 import { FindPostTagsService } from "../services/find-post-tags.service";
 import {
 	ResourceAlreadyExistsException,
@@ -10,7 +10,7 @@ import {
 import { BuildPost } from "@/domain/services/build-post.service";
 import { PostUniquenessChecker } from "@/domain/services/post-uniqueness-checker.service";
 import { slugify } from "@caffeine/models/helpers";
-import type { IPostTypeRepository } from "@/domain/types/post-type-repository.interface";
+import type { IPostTypeRepository } from "@/domain/types/repositories/post-type-repository.interface";
 import { FindPostTypeByIdService } from "../services/find-post-type-by-id.service";
 
 export class UpdatePostBySlugUseCase {

@@ -3,7 +3,6 @@ import { faker } from "@faker-js/faker";
 import { PostRepository } from "./post.repository";
 import { generateUUID, slugify } from "@caffeine/models/helpers";
 import { makeEntityFactory } from "@caffeine/models/factories";
-import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
 import type { BuildPostDTO } from "@/domain/dtos/build-post.dto";
 import { Post } from "@/domain";
 
@@ -134,7 +133,7 @@ describe("PostRepository", () => {
 			}
 
 			// Mock IUnmountedPostType - only ID is needed for the repo
-			const postTypeMock = { id: targetTypeId } as IUnmountedPostType;
+			const postTypeMock = targetTypeId;
 
 			const page1 = await repository.findManyByPostType(postTypeMock, 1);
 			expect(page1).toHaveLength(10);
@@ -146,7 +145,7 @@ describe("PostRepository", () => {
 		});
 
 		it("deve retornar vazio se não houver posts do tipo", async () => {
-			const postTypeMock = { id: generateUUID() } as IUnmountedPostType;
+			const postTypeMock = generateUUID();
 			const result = await repository.findManyByPostType(postTypeMock, 1);
 			expect(result).toHaveLength(0);
 		});
@@ -196,20 +195,20 @@ describe("PostRepository", () => {
 		});
 	});
 
-	describe("length", () => {
+	describe("count", () => {
 		it("deve retornar a contagem correta de posts", async () => {
-			expect(await repository.length()).toBe(0);
+			expect(await repository.count()).toBe(0);
 
 			const post1 = Post.make(makeValidPostData(), makeEntityFactory());
 			await repository.create(post1);
-			expect(await repository.length()).toBe(1);
+			expect(await repository.count()).toBe(1);
 
 			const post2 = Post.make(makeValidPostData(), makeEntityFactory());
 			await repository.create(post2);
-			expect(await repository.length()).toBe(2);
+			expect(await repository.count()).toBe(2);
 
 			await repository.delete(post1);
-			expect(await repository.length()).toBe(1);
+			expect(await repository.count()).toBe(1);
 		});
 	});
 
@@ -232,10 +231,10 @@ describe("PostRepository", () => {
 			await repository.create(
 				Post.make(makeValidPostData(), makeEntityFactory()),
 			);
-			expect(await repository.length()).toBe(1);
+			expect(await repository.count()).toBe(1);
 
 			repository.clear();
-			expect(await repository.length()).toBe(0);
+			expect(await repository.count()).toBe(0);
 		});
 	});
 });

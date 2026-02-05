@@ -4,19 +4,41 @@ import { InvalidDomainDataException } from "@caffeine/errors/domain";
 import { makeEntityFactory } from "@caffeine/models/factories";
 import { slugify } from "@caffeine/models/helpers";
 import { Schema } from "@caffeine/models/schema";
-import { StringDTO, UrlDTO } from "@caffeine/models/dtos/primitives";
-import { InvalidPropertyException } from "@caffeine/errors/domain";
 import { BuildPostDTO } from "./dtos/build-post.dto";
-import { TagsDTO } from "./dtos/tags.dto";
 import type { IPost } from "./types";
+import {
+	DefinedStringVO,
+	UrlVO,
+	UuidArrayVO,
+} from "@caffeine/models/value-objects";
 
 export class Post extends Entity implements IPost {
-	public postTypeId: string;
-	public name: string;
-	public slug: string;
-	public description: string;
-	public cover: string;
-	public tags: string[];
+	public readonly postTypeId: string;
+	private _name: DefinedStringVO;
+	private _slug: DefinedStringVO;
+	private _description: DefinedStringVO;
+	private _cover: UrlVO;
+	private _tags: UuidArrayVO;
+
+	public get name(): string {
+		return this._name.value;
+	}
+
+	public get slug(): string {
+		return this._slug.value;
+	}
+
+	public get description(): string {
+		return this._description.value;
+	}
+
+	public get cover(): string {
+		return this._cover.value;
+	}
+
+	public get tags(): string[] {
+		return this._tags.value;
+	}
 
 	private constructor(
 		{ postTypeId, cover, description, name, slug, tags }: BuildPostDTO,
@@ -24,44 +46,82 @@ export class Post extends Entity implements IPost {
 	) {
 		super(entityProps);
 
-		this.cover = cover;
 		this.postTypeId = postTypeId;
-		this.description = description;
-		this.name = name;
-		this.slug = slug;
-		this.tags = tags;
+
+		this._cover = UrlVO.make({
+			value: cover,
+			name: "cover",
+			layer: "post@post",
+		});
+
+		this._description = DefinedStringVO.make({
+			value: description,
+			name: "description",
+			layer: "post@post",
+		});
+
+		this._name = DefinedStringVO.make({
+			value: name,
+			name: "name",
+			layer: "post@post",
+		});
+
+		this._slug = DefinedStringVO.make({
+			value: slug,
+			name: "slug",
+			layer: "post@post",
+		});
+
+		this._tags = UuidArrayVO.make({
+			value: tags,
+			name: "tags",
+			layer: "post@post",
+		});
 	}
 
 	rename(value: string): void {
-		if (!Schema.make(StringDTO).match(value))
-			throw new InvalidPropertyException("name", "post@post");
+		this._name = DefinedStringVO.make({
+			value: value,
+			name: "name",
+			layer: "post@post",
+		});
 
-		this.name = value;
-		this.slug = slugify(value);
+		this._slug = DefinedStringVO.make({
+			value: slugify(value),
+			name: "slug",
+			layer: "post@post",
+		});
+
 		this.update();
 	}
 
 	updateDescription(value: string): void {
-		if (!Schema.make(StringDTO).match(value))
-			throw new InvalidPropertyException("description", "post@post");
+		this._description = DefinedStringVO.make({
+			value: value,
+			name: "description",
+			layer: "post@post",
+		});
 
-		this.description = value;
 		this.update();
 	}
 
 	updateCover(value: string): void {
-		if (!Schema.make(UrlDTO).match(value))
-			throw new InvalidPropertyException("cover", "post@post");
+		this._cover = UrlVO.make({
+			value: value,
+			name: "cover",
+			layer: "post@post",
+		});
 
-		this.cover = value;
 		this.update();
 	}
 
 	updateTags(values: string[]): void {
-		if (!Schema.make(TagsDTO).match(values))
-			throw new InvalidPropertyException("tags", "post@post");
+		this._tags = UuidArrayVO.make({
+			value: values,
+			name: "tags",
+			layer: "post@post",
+		});
 
-		this.tags = values;
 		this.update();
 	}
 

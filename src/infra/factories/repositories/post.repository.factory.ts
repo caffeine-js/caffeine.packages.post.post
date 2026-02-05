@@ -1,4 +1,4 @@
-import type { IPostRepository } from "@/domain/types/post-repository.interface";
+import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
 import { PostRepository } from "@/infra/repositories/cached/post.repository";
 import { PostRepository as PrismaPostRepository } from "@/infra/repositories/prisma/post.repository";
 

@@ -1,4 +1,4 @@
-import type { IPostTagRepository } from "@/domain/types/post-tag-repository.interface";
+import type { IPostTagRepository } from "@/domain/types/repositories/post-tag-repository.interface";
 import type { IUnmountedPostTag } from "@caffeine-packages/post.post-tag/domain/types";
 import { FindPostTagByIdService } from "./find-post-tag-by-id.service";
 

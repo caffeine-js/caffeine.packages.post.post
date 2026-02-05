@@ -1,6 +1,6 @@
-import type { IPostRepository } from "@/domain/types/post-repository.interface";
-import type { IPostTagRepository } from "@/domain/types/post-tag-repository.interface";
-import type { IPostTypeRepository } from "@/domain/types/post-type-repository.interface";
+import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
+import type { IPostTagRepository } from "@/domain/types/repositories/post-tag-repository.interface";
+import type { IPostTypeRepository } from "@/domain/types/repositories/post-type-repository.interface";
 import type { ICompletePost } from "../types/complete-post.interface";
 import { FindPostTagsService } from "../services/find-post-tags.service";
 import type { IUnmountedPostTag } from "@caffeine-packages/post.post-tag/domain/types";

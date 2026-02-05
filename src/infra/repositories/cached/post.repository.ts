@@ -1,6 +1,6 @@
 import type { Post } from "@/domain/post";
 import type { IUnmountedPost } from "@/domain/types";
-import type { IPostRepository } from "@/domain/types/post-repository.interface";
+import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
 import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
 import { redis } from "@caffeine/redis-drive";
 
