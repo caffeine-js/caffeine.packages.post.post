@@ -1,5 +1,5 @@
 import { makeCountPostsUseCase } from "@/infra/factories/application/use-cases/count-posts.use-case.factory";
-import { NumericResponseDTO } from "@caffeine/models/dtos/api";
+import { NumberDTO } from "@caffeine/models/dtos/primitives";
 import { Elysia, status } from "elysia";
 
 export const CountPostsController = new Elysia()
@@ -11,6 +11,6 @@ export const CountPostsController = new Elysia()
 			description: "Returns the total count of posts available in the system.",
 		},
 		response: {
-			200: NumericResponseDTO,
+			200: NumberDTO,
 		},
 	});

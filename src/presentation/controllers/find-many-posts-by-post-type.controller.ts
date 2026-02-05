@@ -1,5 +1,5 @@
 import { makeFindManyPostsByPostTypeUseCase } from "@/infra/factories/application/use-cases/find-many-posts-by-post-type.use-case.factory";
-import { PaginationDTO } from "@caffeine/models/dtos";
+import { PaginationDTO } from "@caffeine/models/dtos/api";
 import { Elysia, t } from "elysia";
 
 export const FindManyPostsByPostTypeController = new Elysia()

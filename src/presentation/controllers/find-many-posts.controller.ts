@@ -1,4 +1,4 @@
-import { PaginationDTO } from "@caffeine/models/dtos";
+import { PaginationDTO } from "@caffeine/models/dtos/api";
 import { makeFindManyPostsUseCase } from "@/infra/factories/application/use-cases/find-many-posts.use-case.factory";
 import { Elysia } from "elysia";
 
