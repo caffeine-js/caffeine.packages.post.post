@@ -10,10 +10,13 @@ import {
 } from "@caffeine/errors/application";
 import type { UpdatePostDTO } from "../dtos/update-post.dto";
 import { generateUUID, slugify } from "@caffeine/models/helpers";
-import { UnpackPost } from "@/domain/services";
 import { makeEntityFactory } from "@caffeine/models/factories";
 import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
 import type { IUnmountedPostTag } from "@caffeine-packages/post.post-tag/domain/types";
+
+import { FindPostTagsService } from "../services/find-post-tags.service";
+import { FindPostTypeByIdService } from "../services/find-post-type-by-id.service";
+import { PostUniquenessChecker } from "@/domain/services/post-uniqueness-checker.service";
 
 describe("UpdatePostBySlugUseCase", () => {
 	let useCase: UpdatePostBySlugUseCase;
@@ -70,8 +73,9 @@ describe("UpdatePostBySlugUseCase", () => {
 
 		useCase = new UpdatePostBySlugUseCase(
 			postRepository,
-			postTagRepository,
-			postTypeRepository,
+			new FindPostTagsService(postTagRepository),
+			new FindPostTypeByIdService(postTypeRepository),
+			new PostUniquenessChecker(postRepository),
 		);
 	});
 
@@ -81,9 +85,7 @@ describe("UpdatePostBySlugUseCase", () => {
 			cover: "https://example.com/updated-cover.jpg",
 		};
 
-		console.log("before");
 		const result = await useCase.run(existingPost.slug, updateDto);
-		console.log("after");
 
 		expect(result.description).toBe(updateDto.description!);
 		expect(result.cover).toBe(updateDto.cover!);
@@ -181,17 +183,8 @@ describe("UpdatePostBySlugUseCase", () => {
 	});
 
 	it("should not update 'updatedAt' if no updatable fields are provided", async () => {
-		// Ensure enough time has passed so that if it WERE updated, the time would differ
-		// or just check equality if we trust it won't be touched.
-		// To be safe, we can mock the initial state with a specific past date if needed,
-		// but since we are just checking if the logic branch runs, passing empty DTO is enough.
-
 		const result = await useCase.run(existingPost.slug, {});
-
-		// unpack existing to get its current updatedAt
-		// const existingUnpacked = UnpackPost.run(result);
-
-		// expect(result.updatedAt).toBe(existingUnpacked.updatedAt);
-		// expect(result.name).toBe(existingPost.name);
+		// Logic verification implies no errors and return of current state
+		expect(result.slug).toBe(existingPost.slug);
 	});
 });

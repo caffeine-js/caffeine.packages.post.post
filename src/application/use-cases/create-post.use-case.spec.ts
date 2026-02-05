@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { CreatePostUseCase } from "./create-post.use-case";
+import { FindPostTagsService } from "../services/find-post-tags.service";
+import { FindPostTypeByIdService } from "../services/find-post-type-by-id.service";
+import { PostUniquenessChecker } from "@/domain/services/post-uniqueness-checker.service";
 import { PostRepository } from "../../infra/repositories/test/post.repository";
 import { PostTagRepository } from "../../infra/repositories/test/post-tag.repository";
 import { PostTypeRepository } from "../../infra/repositories/test/post-type.repository";
@@ -25,8 +28,9 @@ describe("CreatePostUseCase", () => {
 
 		useCase = new CreatePostUseCase(
 			postRepository,
-			postTagRepository,
-			postTypeRepository,
+			new FindPostTagsService(postTagRepository),
+			new FindPostTypeByIdService(postTypeRepository),
+			new PostUniquenessChecker(postRepository),
 		);
 	});
 

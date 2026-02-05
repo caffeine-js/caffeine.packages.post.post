@@ -1,24 +1,16 @@
 import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
-import type { IPostTagRepository } from "@/domain/types/repositories/post-tag-repository.interface";
-import type { IPostTypeRepository } from "@/domain/types/repositories/post-type-repository.interface";
 import type { ICompletePost } from "../types/complete-post.interface";
-import { FindPostTagsService } from "../services/find-post-tags.service";
-import { FindPostTypesService } from "../services/find-post-types.service";
+import type { FindPostTagsService } from "../services/find-post-tags.service";
+import type { FindPostTypesService } from "../services/find-post-types.service";
 import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
 import type { IUnmountedPostTag } from "@caffeine-packages/post.post-tag/domain/types";
 
 export class FindManyPostsUseCase {
-	private readonly findPostTags: FindPostTagsService;
-	private readonly findPostTypes: FindPostTypesService;
-
 	public constructor(
 		private readonly repository: IPostRepository,
-		private readonly postTypeRepository: IPostTypeRepository,
-		private readonly postTagRepository: IPostTagRepository,
-	) {
-		this.findPostTags = new FindPostTagsService(postTagRepository);
-		this.findPostTypes = new FindPostTypesService(postTypeRepository);
-	}
+		private readonly findPostTags: FindPostTagsService,
+		private readonly findPostTypes: FindPostTypesService,
+	) {}
 
 	public async run(page: number): Promise<ICompletePost[]> {
 		const posts = await this.repository.findMany(page);

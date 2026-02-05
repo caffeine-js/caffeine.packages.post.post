@@ -11,6 +11,9 @@ import { makeEntityFactory } from "@caffeine/models/factories";
 import { generateUUID } from "@caffeine/models/helpers";
 import { ResourceNotFoundException } from "@caffeine/errors/application";
 
+import { FindPostTagsService } from "../services/find-post-tags.service";
+import { FindPostTypesService } from "../services/find-post-types.service";
+
 describe("FindManyPostsUseCase", () => {
 	let useCase: FindManyPostsUseCase;
 	let postRepository: PostRepository;
@@ -24,8 +27,8 @@ describe("FindManyPostsUseCase", () => {
 
 		useCase = new FindManyPostsUseCase(
 			postRepository,
-			postTypeRepository,
-			postTagRepository,
+			new FindPostTagsService(postTagRepository),
+			new FindPostTypesService(postTypeRepository),
 		);
 	});
 

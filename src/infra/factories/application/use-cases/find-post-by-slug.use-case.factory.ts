@@ -3,10 +3,16 @@ import { PostTagRepository } from "@/infra/repositories/api/post-tag.repository"
 import { PostTypeRepository } from "@/infra/repositories/api/post-type.repository";
 import { makePostRepository } from "../../repositories/post.repository.factory";
 
+import { FindPostTagsService } from "@/application/services/find-post-tags.service";
+import { FindPostTypeByIdService } from "@/application/services/find-post-type-by-id.service";
+
 export function makeFindPostBySlugUseCase(): FindPostBySlugUseCase {
+	const postTagRepository = new PostTagRepository();
+	const postTypeRepository = new PostTypeRepository();
+
 	return new FindPostBySlugUseCase(
 		makePostRepository(),
-		new PostTypeRepository(),
-		new PostTagRepository(),
+		new FindPostTagsService(postTagRepository),
+		new FindPostTypeByIdService(postTypeRepository),
 	);
 }

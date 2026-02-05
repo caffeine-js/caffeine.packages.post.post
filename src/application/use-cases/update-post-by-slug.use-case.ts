@@ -1,33 +1,23 @@
 import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
 import type { UpdatePostDTO } from "../dtos/update-post.dto";
 import type { ICompletePost } from "../types/complete-post.interface";
-import type { IPostTagRepository } from "@/domain/types/repositories/post-tag-repository.interface";
-import { FindPostTagsService } from "../services/find-post-tags.service";
+import type { FindPostTagsService } from "../services/find-post-tags.service";
 import {
 	ResourceAlreadyExistsException,
 	ResourceNotFoundException,
 } from "@caffeine/errors/application";
-import { BuildPost } from "@/domain/services/build-post.service";
-import { PostUniquenessChecker } from "@/domain/services/post-uniqueness-checker.service";
+import type { PostUniquenessChecker } from "@/domain/services/post-uniqueness-checker.service";
 import { slugify } from "@caffeine/models/helpers";
-import type { IPostTypeRepository } from "@/domain/types/repositories/post-type-repository.interface";
-import { FindPostTypeByIdService } from "../services/find-post-type-by-id.service";
+import type { FindPostTypeByIdService } from "../services/find-post-type-by-id.service";
 import { UnpackPost } from "@/domain/services";
 
 export class UpdatePostBySlugUseCase {
-	private readonly findPostTags: FindPostTagsService;
-	private readonly findPostTypeById: FindPostTypeByIdService;
-	private readonly postUniquenessChecker: PostUniquenessChecker;
-
 	public constructor(
 		private readonly repository: IPostRepository,
-		private readonly postTagRepository: IPostTagRepository,
-		private readonly postTypeRepository: IPostTypeRepository,
-	) {
-		this.findPostTags = new FindPostTagsService(postTagRepository);
-		this.postUniquenessChecker = new PostUniquenessChecker(this.repository);
-		this.findPostTypeById = new FindPostTypeByIdService(postTypeRepository);
-	}
+		private readonly findPostTags: FindPostTagsService,
+		private readonly findPostTypeById: FindPostTypeByIdService,
+		private readonly postUniquenessChecker: PostUniquenessChecker,
+	) {}
 
 	public async run(
 		slug: string,

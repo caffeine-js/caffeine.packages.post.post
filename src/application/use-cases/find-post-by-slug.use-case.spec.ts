@@ -11,6 +11,9 @@ import { t } from "@caffeine/models";
 import { Schema } from "@caffeine/models/schema";
 import { generateUUID } from "@caffeine/models/helpers";
 
+import { FindPostTagsService } from "../services/find-post-tags.service";
+import { FindPostTypeByIdService } from "../services/find-post-type-by-id.service";
+
 describe("FindPostBySlugUseCase", () => {
 	let useCase: FindPostBySlugUseCase;
 	let postRepository: PostRepository;
@@ -24,8 +27,8 @@ describe("FindPostBySlugUseCase", () => {
 
 		useCase = new FindPostBySlugUseCase(
 			postRepository,
-			postTypeRepository,
-			postTagRepository,
+			new FindPostTagsService(postTagRepository),
+			new FindPostTypeByIdService(postTypeRepository),
 		);
 	});
 
