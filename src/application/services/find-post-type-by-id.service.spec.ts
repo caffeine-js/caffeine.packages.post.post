@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { FindPostTypeByIdService } from "./find-post-type-by-id.service";
 import { PostTypeRepository } from "@/infra/repositories/test/post-type.repository";
 import { ResourceNotFoundException } from "@caffeine/errors/application";
+import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
+import { makeEntityFactory } from "@caffeine/models/factories";
 
 describe("FindPostTypeByIdService", () => {
 	let repository: PostTypeRepository;
@@ -13,15 +15,16 @@ describe("FindPostTypeByIdService", () => {
 	});
 
 	it("should return the post type when it exists", async () => {
-		const postType = {
-			id: "type-1",
+		const postType: IUnmountedPostType = {
 			slug: "tech",
-			title: "Technology",
+			name: "Technology",
 			schema: "{}",
+			isHighlighted: true,
+			...makeEntityFactory(),
 		};
 		repository.seed([postType]);
 
-		const result = await service.run("type-1");
+		const result = await service.run(postType.id);
 
 		expect(result).toEqual(postType);
 	});

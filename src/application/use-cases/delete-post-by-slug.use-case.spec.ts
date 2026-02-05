@@ -3,6 +3,7 @@ import { DeletePostBySlugUseCase } from "./delete-post-by-slug.use-case";
 import { PostRepository } from "../../infra/repositories/test/post.repository";
 import { Post } from "../../domain/post";
 import { ResourceNotFoundException } from "@caffeine/errors/application";
+import { generateUUID, slugify } from "@caffeine/models/helpers";
 
 describe("DeletePostBySlugUseCase", () => {
 	let useCase: DeletePostBySlugUseCase;
@@ -16,15 +17,14 @@ describe("DeletePostBySlugUseCase", () => {
 	it("should delete a post by slug", async () => {
 		const post = Post.make({
 			name: "Post to Delete",
-			slug: "delete-me",
 			description: "Desc",
-			postTypeId: "550e8400-e29b-41d4-a716-446655440001",
+			postTypeId: generateUUID(),
 			tags: [],
 			cover: "https://example.com/cover.jpg",
 		});
 		await repository.create(post);
 
-		await useCase.run("delete-me");
+		await useCase.run(slugify(post.name));
 
 		const deletedPost = await repository.findBySlug("delete-me");
 		expect(deletedPost).toBeNull();

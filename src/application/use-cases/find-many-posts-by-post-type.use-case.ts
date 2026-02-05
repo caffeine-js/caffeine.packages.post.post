@@ -7,6 +7,7 @@ import type { IUnmountedPostTag } from "@caffeine-packages/post.post-tag/domain/
 
 import { FindPostTypeBySlugService } from "../services/find-post-type-by-slug.service";
 import type { FindManyPostsByPostTypeDTO } from "../dtos/find-many-posts-by-post-type.dto";
+import { UnpackPost } from "@/domain/services";
 
 export class FindManyPostsByPostTypeUseCase {
 	private readonly findPostTags: FindPostTagsService;
@@ -26,7 +27,7 @@ export class FindManyPostsByPostTypeUseCase {
 		postType: _postType,
 	}: FindManyPostsByPostTypeDTO): Promise<ICompletePost[]> {
 		const postType = await this.findPostTypeBySlug.run(_postType);
-		const posts = await this.repository.findManyByPostType(postType, page);
+		const posts = await this.repository.findManyByPostType(postType.id, page);
 
 		const postTagsIds = [...new Set(posts.flatMap((post) => post.tags))];
 
@@ -38,7 +39,7 @@ export class FindManyPostsByPostTypeUseCase {
 		);
 
 		return posts.map((post) => {
-			const { tags: tagIds, postTypeId, ...properties } = post;
+			const { tags: tagIds, postTypeId, ...properties } = UnpackPost.run(post);
 
 			const tags = tagIds.map((tag) => postTags[tag]!);
 

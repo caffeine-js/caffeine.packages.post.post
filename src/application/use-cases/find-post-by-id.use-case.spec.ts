@@ -7,7 +7,9 @@ import { Post } from "../../domain/post";
 import { ResourceNotFoundException } from "@caffeine/errors/application";
 import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
 import type { IUnmountedPostTag } from "@caffeine-packages/post.post-tag/domain/types";
-import { Schema, t } from "@caffeine/models";
+import { t } from "@caffeine/models";
+import { makeEntityFactory } from "@caffeine/models/factories";
+import { Schema } from "@caffeine/models/schema";
 
 describe("FindPostByIdUseCase", () => {
 	let useCase: FindPostByIdUseCase;
@@ -30,33 +32,28 @@ describe("FindPostByIdUseCase", () => {
 	it("should find and hydrate a post by id", async () => {
 		// Seed Type
 		const postType: IUnmountedPostType = {
-			id: "550e8400-e29b-41d4-a716-446655440001",
 			slug: "blog",
 			name: "Blog",
 			isHighlighted: true,
 			schema: new Schema(t.Object({ name: t.String() })).toString(),
-			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString(),
+			...makeEntityFactory(),
 		};
 		postTypeRepository.seed([postType]);
 
 		// Seed Tag
 		const postTag: IUnmountedPostTag = {
-			id: "550e8400-e29b-41d4-a716-446655440002",
 			slug: "tech",
 			name: "Tech",
 			hidden: true,
-			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString(),
+			...makeEntityFactory(),
 		};
 		postTagRepository.seed([postTag]);
 
 		const post = Post.make({
 			name: "My Post",
-			slug: "my-post",
 			description: "Desc",
-			postTypeId: "550e8400-e29b-41d4-a716-446655440001",
-			tags: ["550e8400-e29b-41d4-a716-446655440002"],
+			postTypeId: postType.id,
+			tags: [postTag.id],
 			cover: "https://example.com/cover.jpg",
 		});
 		await postRepository.create(post);
@@ -65,9 +62,9 @@ describe("FindPostByIdUseCase", () => {
 
 		expect(result).toBeDefined();
 		expect(result.id).toBe(post.id);
-		expect(result.postType.id).toBe("550e8400-e29b-41d4-a716-446655440001");
+		expect(result.postType.id).toBe(postType.id);
 		expect(result.tags).toHaveLength(1);
-		expect(result.tags[0]?.id).toBe("550e8400-e29b-41d4-a716-446655440002");
+		expect(result.tags[0]?.id).toBe(postTag.id);
 	});
 
 	it("should throw ResourceNotFoundException if post not found", async () => {

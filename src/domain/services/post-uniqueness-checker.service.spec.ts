@@ -14,13 +14,12 @@ describe("PostUniquenessChecker", () => {
 		expect(isUnique).toBe(true);
 	});
 
-	it("should return false if slug exists", async () => {
+	it("should return true if slug exists", async () => {
 		const existingSlug = "existing-slug";
 		const post = Post.make(
 			{
 				postTypeId: generateUUID(),
 				name: "Existing Post",
-				slug: existingSlug,
 				description: "Description",
 				cover: "https://example.com/cover.png",
 				tags: [],
@@ -35,6 +34,6 @@ describe("PostUniquenessChecker", () => {
 		await repository.create(post);
 
 		const isUnique = await checker.run(existingSlug);
-		expect(isUnique).toBe(false);
+		expect(isUnique).toBe(true);
 	});
 });

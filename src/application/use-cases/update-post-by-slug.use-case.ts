@@ -12,6 +12,7 @@ import { PostUniquenessChecker } from "@/domain/services/post-uniqueness-checker
 import { slugify } from "@caffeine/models/helpers";
 import type { IPostTypeRepository } from "@/domain/types/repositories/post-type-repository.interface";
 import { FindPostTypeByIdService } from "../services/find-post-type-by-id.service";
+import { UnpackPost } from "@/domain/services";
 
 export class UpdatePostBySlugUseCase {
 	private readonly findPostTags: FindPostTagsService;
@@ -36,35 +37,30 @@ export class UpdatePostBySlugUseCase {
 
 		if (!_targetPost) throw new ResourceNotFoundException("post@post");
 
-		const targetPost = BuildPost.run(_targetPost);
-
-		if (cover || description || name || _tags)
-			targetPost.updatedAt = new Date().toISOString();
+		const targetPost = _targetPost;
 
 		if (name && name !== targetPost.name) {
 			const newSlug = slugify(name);
 
 			if (newSlug !== targetPost.slug) {
-				if (await this.postUniquenessChecker.run(newSlug))
+				if (!(await this.postUniquenessChecker.run(newSlug)))
 					throw new ResourceAlreadyExistsException(
 						`post@post::slug->${newSlug}`,
 					);
-
-				targetPost.slug = newSlug;
 			}
 
-			targetPost.name = name;
+			targetPost.rename(name);
 		}
 
-		targetPost.description = description ?? targetPost.description;
-		targetPost.cover = cover ?? targetPost.cover;
-		targetPost.tags = _tags ?? targetPost.tags;
+		if (description) targetPost.updateDescription(description);
+		if (cover) targetPost.updateCover(cover);
+		if (_tags) targetPost.updateTags(_tags);
 
 		const tags = await this.findPostTags.run(targetPost.tags);
 
 		await this.repository.update(targetPost);
 
-		const { tags: _1, postTypeId, ...properties } = targetPost.unpack();
+		const { tags: _1, postTypeId, ...properties } = UnpackPost.run(targetPost);
 
 		const postType = await this.findPostTypeById.run(postTypeId);
 

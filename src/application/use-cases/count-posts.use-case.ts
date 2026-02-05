@@ -1,9 +1,9 @@
-import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
+import type { IPostReader } from "@/domain/types/repositories/post-reader.interface";
 
 export class CountPostsUseCase {
-	public constructor(private readonly repository: IPostRepository) {}
+	public constructor(private readonly repository: IPostReader) {}
 
 	public async run(): Promise<number> {
-		return await this.repository.length();
+		return await this.repository.count();
 	}
 }

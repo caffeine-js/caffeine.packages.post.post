@@ -7,6 +7,9 @@ import { Post } from "../../domain/post";
 import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
 import type { IUnmountedPostTag } from "@caffeine-packages/post.post-tag/domain/types";
 import type { ICompletePost } from "../types/complete-post.interface";
+import { makeEntityFactory } from "@caffeine/models/factories";
+import { generateUUID } from "@caffeine/models/helpers";
+import { ResourceNotFoundException } from "@caffeine/errors/application";
 
 describe("FindManyPostsUseCase", () => {
 	let useCase: FindManyPostsUseCase;
@@ -28,33 +31,28 @@ describe("FindManyPostsUseCase", () => {
 
 	it("should find many posts and hydrate them", async () => {
 		const postType: IUnmountedPostType = {
-			id: "550e8400-e29b-41d4-a716-446655440001",
 			slug: "blog",
 			name: "Blog",
-			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString(),
 			schema: JSON.stringify({}),
 			isHighlighted: false,
+			...makeEntityFactory(),
 		};
 		postTypeRepository.seed([postType]);
 
 		const postTag: IUnmountedPostTag = {
-			id: "550e8400-e29b-41d4-a716-446655440002",
 			slug: "tech",
 			name: "Tech",
-			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString(),
 			hidden: false,
+			...makeEntityFactory(),
 		};
 		postTagRepository.seed([postTag]);
 
 		for (let i = 0; i < 3; i++) {
 			const post = Post.make({
 				name: `Post ${i}`,
-				slug: `post-${i}`,
 				description: "Desc",
-				postTypeId: "550e8400-e29b-41d4-a716-446655440001",
-				tags: ["550e8400-e29b-41d4-a716-446655440002"],
+				postTypeId: postType.id,
+				tags: [postTag.id],
 				cover: "https://example.com/cover.jpg",
 			});
 			await postRepository.create(post);
@@ -63,8 +61,8 @@ describe("FindManyPostsUseCase", () => {
 		const result: ICompletePost[] = await useCase.run(1);
 
 		expect(result).toHaveLength(3);
-		expect(result[0]!.postType.id).toBe("550e8400-e29b-41d4-a716-446655440001");
-		expect(result[0]!.tags[0]!.id).toBe("550e8400-e29b-41d4-a716-446655440002");
+		expect(result[0]!.postType.id).toBe(postType.id);
+		expect(result[0]!.tags[0]!.id).toBe(postTag.id);
 	});
 
 	it("should return empty array if no posts found", async () => {
@@ -73,49 +71,45 @@ describe("FindManyPostsUseCase", () => {
 	});
 
 	it("should throw ResourceNotFoundException if post type is not found", async () => {
-		// Create post with non-existent type
-		await postRepository.create(
-			Post.make({
-				name: "Post",
-				slug: "post",
-				description: "Desc",
-				postTypeId: "550e8400-e29b-41d4-a716-446655449999", // Non-existent type
-				tags: [],
-				cover: "https://example.com/cover.jpg",
-			}),
-		);
+		const post = Post.make({
+			name: "Post",
+			description: "Desc",
+			postTypeId: generateUUID(), // Non-existent type
+			tags: [],
+			cover: "https://example.com/cover.jpg",
+		});
 
-		await expect(useCase.run(1)).rejects.toThrow(
-			"post@post::postType->550e8400-e29b-41d4-a716-446655449999",
+		// Create post with non-existent type
+		await postRepository.create(post);
+
+		await expect(useCase.run(1)).rejects.toBeInstanceOf(
+			ResourceNotFoundException,
 		);
 	});
 
 	it("should throw ResourceNotFoundException if post tag is not found", async () => {
 		const postType: IUnmountedPostType = {
-			id: "550e8400-e29b-41d4-a716-446655440001",
 			slug: "blog",
 			name: "Blog",
-			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString(),
 			schema: JSON.stringify({}),
 			isHighlighted: false,
+			...makeEntityFactory(),
 		};
 		postTypeRepository.seed([postType]);
 
+		const post = Post.make({
+			name: "Post",
+			description: "Desc",
+			postTypeId: postType.id,
+			tags: [generateUUID()], // Non-existent tag
+			cover: "https://example.com/cover.jpg",
+		});
+
 		// Create post with non-existent tag
-		await postRepository.create(
-			Post.make({
-				name: "Post",
-				slug: "post",
-				description: "Desc",
-				postTypeId: "550e8400-e29b-41d4-a716-446655440001",
-				tags: ["550e8400-e29b-41d4-a716-446655449999"], // Non-existent tag
-				cover: "https://example.com/cover.jpg",
-			}),
-		);
+		await postRepository.create(post);
 
 		await expect(useCase.run(1)).rejects.toThrow(
-			"post@post::tags->550e8400-e29b-41d4-a716-446655449999",
+			`post@post::tags->${post.tags[0]}`,
 		);
 	});
 });

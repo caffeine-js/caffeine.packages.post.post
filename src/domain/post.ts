@@ -2,7 +2,6 @@ import { Entity } from "@caffeine/models";
 import type { EntityDTO } from "@caffeine/models/dtos";
 import { InvalidDomainDataException } from "@caffeine/errors/domain";
 import { makeEntityFactory } from "@caffeine/models/factories";
-import { slugify } from "@caffeine/models/helpers";
 import { Schema } from "@caffeine/models/schema";
 import { BuildPostDTO } from "./dtos/build-post.dto";
 import type { IPost } from "./types";
@@ -42,7 +41,7 @@ export class Post extends Entity implements IPost {
 	}
 
 	private constructor(
-		{ postTypeId, cover, description, name, slug, tags }: BuildPostDTO,
+		{ postTypeId, cover, description, name, tags }: BuildPostDTO,
 		entityProps: EntityDTO,
 	) {
 		super(entityProps);
@@ -68,7 +67,7 @@ export class Post extends Entity implements IPost {
 		});
 
 		this._slug = SlugVO.make({
-			value: slug,
+			value: name,
 			name: "slug",
 			layer: "post@post",
 		});
@@ -88,7 +87,7 @@ export class Post extends Entity implements IPost {
 		});
 
 		this._slug = SlugVO.make({
-			value: slugify(value),
+			value: value,
 			name: "slug",
 			layer: "post@post",
 		});

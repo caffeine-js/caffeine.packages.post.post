@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { GetPostNumberOfPagesUseCase } from "./get-post-number-of-pages.use-case";
 import { PostRepository } from "../../infra/repositories/test/post.repository";
 import { Post } from "../../domain/post";
+import { generateUUID } from "@caffeine/models/helpers";
 
 // Mocking the constant since we can't easily import it from here depending on the setup,
 // but assuming it's available. If not widely available, we might need to rely on the real one
@@ -34,7 +35,7 @@ describe("GetPostNumberOfPagesUseCase", () => {
 				name: `Post ${i}`,
 				slug: `post-${i}`,
 				description: "Description",
-				postTypeId: "550e8400-e29b-41d4-a716-446655440000",
+				postTypeId: generateUUID(),
 				tags: [],
 				cover: "https://example.com/cover.jpg",
 			});

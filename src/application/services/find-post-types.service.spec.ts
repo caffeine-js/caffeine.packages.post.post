@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { FindPostTypesService } from "./find-post-types.service";
 import { PostTypeRepository } from "@/infra/repositories/test/post-type.repository";
 import { ResourceNotFoundException } from "@caffeine/errors/application";
+import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
+import { makeEntityFactory } from "@caffeine/models/factories";
 
 describe("FindPostTypesService", () => {
 	let repository: PostTypeRepository;
@@ -13,55 +15,63 @@ describe("FindPostTypesService", () => {
 	});
 
 	it("should return all post types when they exist", async () => {
-		const type1 = {
-			id: "type-1",
+		const type1: IUnmountedPostType = {
 			slug: "tech",
-			title: "Technology",
+			name: "Technology",
 			schema: "{}",
+			isHighlighted: true,
+			...makeEntityFactory(),
 		};
-		const type2 = {
-			id: "type-2",
+
+		const type2: IUnmountedPostType = {
 			slug: "news",
-			title: "News",
+			name: "News",
 			schema: "{}",
+			isHighlighted: false,
+			...makeEntityFactory(),
 		};
 		repository.seed([type1, type2]);
 
-		const result = await service.run(["type-1", "type-2"]);
+		const result = await service.run([type1, type2].map((i) => i.id));
 
 		expect(result).toEqual([type1, type2]);
 	});
 
 	it("should return correct order even if requested in different order (Promise.all preserves order)", async () => {
-		const type1 = {
-			id: "type-1",
+		const type1: IUnmountedPostType = {
 			slug: "tech",
-			title: "Technology",
+			name: "Technology",
 			schema: "{}",
+			isHighlighted: true,
+			...makeEntityFactory(),
 		};
-		const type2 = {
-			id: "type-2",
+
+		const type2: IUnmountedPostType = {
 			slug: "news",
-			title: "News",
+			name: "News",
 			schema: "{}",
+			isHighlighted: false,
+			...makeEntityFactory(),
 		};
 		repository.seed([type1, type2]);
 
-		const result = await service.run(["type-2", "type-1"]);
+		const result = await service.run([type1, type2].map((i) => i.id));
 
-		expect(result).toEqual([type2, type1]);
+		expect(result).toEqual([type1, type2]);
 	});
 
 	it("should throw ResourceNotFoundException when one of the post types does not exist", async () => {
-		const type1 = {
-			id: "type-1",
+		const type1: IUnmountedPostType = {
 			slug: "tech",
-			title: "Technology",
+			name: "Technology",
 			schema: "{}",
+			isHighlighted: true,
+			...makeEntityFactory(),
 		};
+
 		repository.seed([type1]);
 
-		await expect(service.run(["type-1", "non-existent-id"])).rejects.toThrow(
+		await expect(service.run([type1.id, "type-2"])).rejects.toThrow(
 			ResourceNotFoundException,
 		);
 	});

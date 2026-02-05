@@ -5,7 +5,7 @@ export class GetPostNumberOfPagesUseCase {
 	public constructor(private readonly repository: IPostRepository) {}
 
 	public async run(): Promise<number> {
-		const postLength = await this.repository.length();
+		const postLength = await this.repository.count();
 		return Math.ceil(postLength / MAX_ITEMS_PER_QUERY);
 	}
 }

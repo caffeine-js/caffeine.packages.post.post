@@ -5,6 +5,7 @@ import { ResourceNotFoundException } from "@caffeine/errors/application";
 import type { ICompletePost } from "../types/complete-post.interface";
 import { FindPostTypeByIdService } from "../services/find-post-type-by-id.service";
 import { FindPostTagsService } from "../services/find-post-tags.service";
+import { UnpackPost } from "@/domain/services";
 
 export class FindPostBySlugUseCase {
 	private readonly findPostTags: FindPostTagsService;
@@ -29,7 +30,11 @@ export class FindPostBySlugUseCase {
 			this.findPostTypeById.run(targetPost.postTypeId),
 		]);
 
-		const { tags: _1, postTypeId: _2, ...properties } = targetPost;
+		const {
+			tags: _1,
+			postTypeId: _2,
+			...properties
+		} = UnpackPost.run(targetPost);
 
 		return { ...properties, tags, postType };
 	}

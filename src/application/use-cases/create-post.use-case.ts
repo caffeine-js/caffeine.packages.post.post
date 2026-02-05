@@ -1,4 +1,3 @@
-import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
 import type { CreatePostDTO } from "../dtos/create-post.dto";
 import { PostUniquenessChecker } from "@/domain/services/post-uniqueness-checker.service";
 import { slugify } from "@caffeine/models/helpers";
@@ -9,6 +8,8 @@ import type { IPostTypeRepository } from "@/domain/types/repositories/post-type-
 import type { ICompletePost } from "../types/complete-post.interface";
 import { FindPostTypeByIdService } from "../services/find-post-type-by-id.service";
 import { FindPostTagsService } from "../services/find-post-tags.service";
+import { UnpackPost } from "@/domain/services";
+import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
 
 export class CreatePostUseCase {
 	private readonly findPostTags: FindPostTagsService;
@@ -26,9 +27,7 @@ export class CreatePostUseCase {
 	public async run(data: CreatePostDTO): Promise<ICompletePost> {
 		const uniquenessChecker = new PostUniquenessChecker(this.repository);
 
-		const slug = slugify(data.name);
-
-		if (await uniquenessChecker.run(slug))
+		if (!(await uniquenessChecker.run(slugify(data.name))))
 			throw new ResourceAlreadyExistsException("post@post");
 
 		const [tags, postType] = await Promise.all([
@@ -36,11 +35,15 @@ export class CreatePostUseCase {
 			this.findPostTypeById.run(data.postTypeId),
 		]);
 
-		const targetPost = Post.make({ ...data, slug });
+		const targetPost = Post.make(data);
 
 		await this.repository.create(targetPost);
 
-		const { postTypeId: _1, tags: _2, ...properties } = targetPost.unpack();
+		const {
+			postTypeId: _1,
+			tags: _2,
+			...properties
+		} = UnpackPost.run(targetPost);
 
 		return { postType, tags, ...properties };
 	}

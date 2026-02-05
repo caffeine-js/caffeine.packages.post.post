@@ -7,7 +7,9 @@ import { Post } from "../../domain/post";
 import { ResourceNotFoundException } from "@caffeine/errors/application";
 import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
 import type { IUnmountedPostTag } from "@caffeine-packages/post.post-tag/domain/types";
-import { Schema, t } from "@caffeine/models";
+import { t } from "@caffeine/models";
+import { Schema } from "@caffeine/models/schema";
+import { generateUUID } from "@caffeine/models/helpers";
 
 describe("FindPostBySlugUseCase", () => {
 	let useCase: FindPostBySlugUseCase;
@@ -29,7 +31,7 @@ describe("FindPostBySlugUseCase", () => {
 
 	it("should find and hydrate a post by slug", async () => {
 		const postType: IUnmountedPostType = {
-			id: "550e8400-e29b-41d4-a716-446655440001",
+			id: generateUUID(),
 			slug: "blog",
 			name: "Blog",
 			isHighlighted: true,
@@ -40,7 +42,7 @@ describe("FindPostBySlugUseCase", () => {
 		postTypeRepository.seed([postType]);
 
 		const postTag: IUnmountedPostTag = {
-			id: "550e8400-e29b-41d4-a716-446655440002",
+			id: generateUUID(),
 			slug: "tech",
 			name: "Tech",
 			hidden: true,
@@ -51,15 +53,16 @@ describe("FindPostBySlugUseCase", () => {
 
 		const post = Post.make({
 			name: "My Post",
-			slug: "my-post",
 			description: "Desc",
-			postTypeId: "550e8400-e29b-41d4-a716-446655440001",
-			tags: ["550e8400-e29b-41d4-a716-446655440002"],
+			postTypeId: postType.id,
+			tags: [postTag.id],
 			cover: "https://example.com/cover.jpg",
 		});
 		await postRepository.create(post);
 
-		const result = await useCase.run("my-post");
+		const result = await useCase.run(post.slug);
+
+		console.log(result);
 
 		expect(result).toBeDefined();
 		expect(result.slug).toBe("my-post");

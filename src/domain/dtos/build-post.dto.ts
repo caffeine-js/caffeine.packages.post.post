@@ -26,11 +26,6 @@ export const BuildPostDTO = t.Object(
 			examples: ["My First Post"],
 			minLength: 1,
 		}),
-		slug: t.String({
-			description:
-				"The unique slug identifier derived from the name (e.g., 'my-first-post').",
-			examples: ["my-first-post"],
-		}),
 		description: t.String({
 			description: "A brief summary or description of the post content.",
 			examples: ["This is a summary of the post content."],

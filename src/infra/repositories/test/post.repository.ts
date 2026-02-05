@@ -1,4 +1,5 @@
 import { Post } from "@/domain";
+import { UnpackPost } from "@/domain/services";
 import type { IPost, IUnpackedPost } from "@/domain/types";
 import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
 
@@ -23,17 +24,7 @@ export class PostRepository implements IPostRepository {
 	 * @throws Error se já existe um post com o mesmo ID
 	 */
 	async create(post: IPost): Promise<void> {
-		const unpacked: IUnpackedPost = {
-			id: post.id,
-			createdAt: post.createdAt,
-			updatedAt: post.updatedAt,
-			postTypeId: post.postTypeId,
-			name: post.name,
-			slug: post.slug,
-			description: post.description,
-			cover: post.cover,
-			tags: post.tags,
-		};
+		const unpacked = UnpackPost.run(post);
 
 		if (this.posts.has(unpacked.id)) {
 			throw new Error(`Post com ID ${unpacked.id} já existe`);
@@ -172,7 +163,6 @@ export class PostRepository implements IPostRepository {
 			{
 				name: raw.name,
 				description: raw.description,
-				slug: raw.slug,
 				cover: raw.cover,
 				postTypeId: raw.postTypeId,
 				tags: raw.tags,
