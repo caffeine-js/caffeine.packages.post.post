@@ -1,7 +1,9 @@
-import type { Post } from "@/domain/post";
-import type { IUnmountedPost } from "@/domain/types";
+import { Post } from "@/domain/post";
+import { UnpackPost } from "@/domain/services";
+import type { IPost, IUnpackedPost } from "@/domain/types";
 import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
-import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
+import { InvalidDomainDataException } from "@caffeine/errors/domain";
+import { UnexpectedCacheValueException } from "@caffeine/errors/infra";
 import { redis } from "@caffeine/redis-drive";
 
 export class PostRepository implements IPostRepository {
@@ -9,16 +11,57 @@ export class PostRepository implements IPostRepository {
 
 	constructor(private readonly repository: IPostRepository) {}
 
+	private getPost(key: string, data: string | IUnpackedPost): IPost {
+		const { id, createdAt, updatedAt, ...properties }: IUnpackedPost =
+			typeof data === "string" ? JSON.parse(data) : data;
+
+		try {
+			return Post.make(properties, { id, createdAt, updatedAt });
+		} catch (err: unknown) {
+			if (err instanceof InvalidDomainDataException)
+				throw new UnexpectedCacheValueException(
+					key,
+					err.layerName,
+					err.message,
+				);
+
+			throw err;
+		}
+	}
+
+	private getPosts(key: string, data: string): IPost[] {
+		try {
+			const posts = JSON.parse(data);
+
+			if (!Array.isArray(posts))
+				throw new UnexpectedCacheValueException(key, "post@post");
+
+			return posts.map((post) => this.getPost(key, post));
+		} catch (err: unknown) {
+			if (err instanceof InvalidDomainDataException)
+				throw new UnexpectedCacheValueException(
+					key,
+					err.layerName,
+					err.message,
+				);
+
+			throw err;
+		}
+	}
+
 	async create(post: Post): Promise<void> {
 		await this.repository.create(post);
 
 		await this.invalidateListCache();
 	}
 
-	async findById(id: string): Promise<IUnmountedPost | null> {
+	async findById(id: string): Promise<IPost | null> {
 		const storedPost = await redis.get(`post@post::$${id}`);
 
-		if (storedPost) return storedPost === null ? null : JSON.parse(storedPost);
+		if (storedPost)
+			return storedPost === null
+				? null
+				: this.getPost(`post@post::$${id}`, storedPost);
 
 		const targetPost = await this.repository.findById(id);
 
@@ -29,10 +72,10 @@ export class PostRepository implements IPostRepository {
 		return targetPost;
 	}
 
-	async findBySlug(slug: string): Promise<IUnmountedPost | null> {
+	async findBySlug(slug: string): Promise<IPost | null> {
 		const storedPost = await redis.get(`post@post::${slug}`);
 
-		if (storedPost) return storedPost === null ? null : JSON.parse(storedPost);
+		if (storedPost) return this.getPost(`post@post::${slug}`, storedPost);
 
 		const targetPost = await this.repository.findBySlug(slug);
 
@@ -43,16 +86,17 @@ export class PostRepository implements IPostRepository {
 		return targetPost;
 	}
 
-	async findMany(page: number): Promise<IUnmountedPost[]> {
+	async findMany(page: number): Promise<IPost[]> {
 		const storedPosts = await redis.get(`post@post:page::${page}`);
 
-		if (storedPosts) return JSON.parse(storedPosts);
+		if (storedPosts)
+			return this.getPosts(`post@post:page::${page}`, storedPosts);
 
 		const targetPosts = await this.repository.findMany(page);
 
 		await redis.set(
 			`post@post:page::${page}`,
-			JSON.stringify(targetPosts),
+			JSON.stringify(targetPosts.map((post) => UnpackPost.run(post))),
 			"EX",
 			this.postCacheExpirationTime,
 		);
@@ -60,23 +104,24 @@ export class PostRepository implements IPostRepository {
 		return targetPosts;
 	}
 
-	async findManyByPostType(
-		postType: IUnmountedPostType,
-		page: number,
-	): Promise<IUnmountedPost[]> {
-		const key = `post@post:type::$${postType.id}:page::${page}`;
+	async findManyByPostType(postTypeId: string, page: number): Promise<IPost[]> {
+		const key = `post@post:type::$${postTypeId}:page::${page}`;
 		const storedPosts = await redis.get(key);
 
-		if (storedPosts) return JSON.parse(storedPosts);
+		if (storedPosts)
+			return this.getPosts(
+				`post@post:type::$${postTypeId}:page::${page}`,
+				storedPosts,
+			);
 
 		const targetPosts = await this.repository.findManyByPostType(
-			postType,
+			postTypeId,
 			page,
 		);
 
 		await redis.set(
 			key,
-			JSON.stringify(targetPosts),
+			JSON.stringify(targetPosts.map((post) => UnpackPost.run(post))),
 			"EX",
 			this.postCacheExpirationTime,
 		);
@@ -88,7 +133,10 @@ export class PostRepository implements IPostRepository {
 		const _cachedPost = await redis.get(`post@post::$${post.id}`);
 
 		if (_cachedPost) {
-			const cachedPost: IUnmountedPost = JSON.parse(_cachedPost);
+			const cachedPost: IPost = this.getPost(
+				`post@post::$${post.id}`,
+				_cachedPost,
+			);
 
 			await redis.del(`post@post::$${cachedPost.id}`);
 			await redis.del(`post@post::${cachedPost.slug}`);
@@ -96,7 +144,7 @@ export class PostRepository implements IPostRepository {
 
 		await this.repository.update(post);
 
-		await this.cachePost(post.unpack());
+		await this.cachePost(post);
 		await this.invalidateListCache();
 	}
 
@@ -108,11 +156,13 @@ export class PostRepository implements IPostRepository {
 		await this.invalidateListCache();
 	}
 
-	length(): Promise<number> {
-		return this.repository.length();
+	count(): Promise<number> {
+		return this.repository.count();
 	}
 
-	private async cachePost(post: IUnmountedPost): Promise<void> {
+	private async cachePost(_post: IPost): Promise<void> {
+		const post = UnpackPost.run(_post);
+
 		await redis.set(
 			`post@post::$${post.id}`,
 			JSON.stringify(post),
@@ -128,10 +178,25 @@ export class PostRepository implements IPostRepository {
 	}
 
 	private async invalidateListCache(): Promise<void> {
-		const pageKeys = await redis.keys("post@post:page:*");
-		const typeKeys = await redis.keys("post@post:type:*");
+		const patterns = ["post@post:page:*", "post@post:type:*"];
 
-		if (pageKeys.length > 0) await redis.del(...pageKeys);
-		if (typeKeys.length > 0) await redis.del(...typeKeys);
+		for (const pattern of patterns) {
+			let cursor = "0";
+			do {
+				const [newCursor, keys] = await redis.scan(
+					cursor,
+					"MATCH",
+					pattern,
+					"COUNT",
+					100,
+				);
+
+				cursor = newCursor;
+
+				if (keys.length > 0) {
+					await redis.del(...keys);
+				}
+			} while (cursor !== "0");
+		}
 	}
 }

@@ -1,5 +1,5 @@
 import { Post } from "@/domain";
-import type { IPost, IUnmountedPost } from "@/domain/types";
+import type { IPost, IUnpackedPost } from "@/domain/types";
 import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
 
 /**
@@ -10,7 +10,7 @@ export class PostRepository implements IPostRepository {
 	/**
 	 * Armazena os posts em memória, indexados por ID para busca O(1)
 	 */
-	private posts: Map<string, IUnmountedPost> = new Map();
+	private posts: Map<string, IUnpackedPost> = new Map();
 
 	/**
 	 * Tamanho padrão de página para paginação
@@ -23,7 +23,7 @@ export class PostRepository implements IPostRepository {
 	 * @throws Error se já existe um post com o mesmo ID
 	 */
 	async create(post: IPost): Promise<void> {
-		const unpacked: IUnmountedPost = {
+		const unpacked: IUnpackedPost = {
 			id: post.id,
 			createdAt: post.createdAt,
 			updatedAt: post.updatedAt,
@@ -98,7 +98,7 @@ export class PostRepository implements IPostRepository {
 	 * @throws Error se o post não existe
 	 */
 	async update(post: IPost): Promise<void> {
-		const unpacked: IUnmountedPost = {
+		const unpacked: IUnpackedPost = {
 			id: post.id,
 			createdAt: post.createdAt,
 			updatedAt: post.updatedAt,
@@ -144,7 +144,7 @@ export class PostRepository implements IPostRepository {
 	 * @param page - Número da página (começa em 1)
 	 * @returns Array de items da página solicitada
 	 */
-	private paginate(items: IUnmountedPost[], page: number): IUnmountedPost[] {
+	private paginate(items: IUnpackedPost[], page: number): IUnpackedPost[] {
 		const startIndex = (page - 1) * this.PAGE_SIZE;
 		const endIndex = startIndex + this.PAGE_SIZE;
 		return items.slice(startIndex, endIndex);
@@ -163,11 +163,11 @@ export class PostRepository implements IPostRepository {
 	 * Não faz parte da interface IPostRepository
 	 * @returns Array com todos os posts armazenados
 	 */
-	getAll(): IUnmountedPost[] {
+	getAll(): IUnpackedPost[] {
 		return Array.from(this.posts.values());
 	}
 
-	private hydrate(raw: IUnmountedPost): IPost {
+	private hydrate(raw: IUnpackedPost): IPost {
 		return Post.make(
 			{
 				name: raw.name,

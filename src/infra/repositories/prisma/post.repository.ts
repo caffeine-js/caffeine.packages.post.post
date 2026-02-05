@@ -1,13 +1,13 @@
-import type { Post } from "@/domain/post";
-import type { IUnmountedPost } from "@/domain/types";
+import { Post } from "@/domain/post";
+import type { IPost } from "@/domain/types";
 import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
-import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
 import {
 	prisma,
 	prismaErrorManager,
 } from "@caffeine-packages/post.db.prisma-drive";
 import { parsePrismaDateTimeToISOString } from "@caffeine-packages/post.db.prisma-drive/helpers";
 import { MAX_ITEMS_PER_QUERY } from "@caffeine/constants";
+import { UnpackPost } from "@/domain/services";
 
 type PostPrismaDefaultOutput = {
 	tags: {
@@ -36,19 +36,23 @@ const defaultPostSelect = {
 } as const;
 
 export class PostRepository implements IPostRepository {
-	private parsePrismaResponseToUnmountedPost(
-		data: PostPrismaDefaultOutput,
-	): IUnmountedPost {
-		const { tags: _tags, ...properties } = parsePrismaDateTimeToISOString(data);
+	private getPost(data: PostPrismaDefaultOutput): IPost {
+		const {
+			tags: _tags,
+			id,
+			createdAt,
+			updatedAt,
+			...properties
+		} = parsePrismaDateTimeToISOString(data);
 
 		const tags = _tags.map((tag) => tag.id);
 
-		return { ...properties, tags };
+		return Post.make({ ...properties, tags }, { id, createdAt, updatedAt });
 	}
 
-	async create(post: Post): Promise<void> {
+	async create(post: IPost): Promise<void> {
 		try {
-			const { tags: _tags, ...properties } = post.unpack();
+			const { tags: _tags, ...properties } = UnpackPost.run(post);
 			const tags: { connect: Array<{ id: string }> } = {
 				connect: _tags.map((tag) => ({ id: tag })),
 			};
@@ -61,7 +65,7 @@ export class PostRepository implements IPostRepository {
 		}
 	}
 
-	async findById(id: string): Promise<IUnmountedPost | null> {
+	async findById(id: string): Promise<IPost | null> {
 		const targetPost = await prisma.post.findUnique({
 			where: { id },
 			select: defaultPostSelect,
@@ -69,10 +73,10 @@ export class PostRepository implements IPostRepository {
 
 		if (!targetPost) return null;
 
-		return this.parsePrismaResponseToUnmountedPost(targetPost);
+		return this.getPost(targetPost);
 	}
 
-	async findBySlug(slug: string): Promise<IUnmountedPost | null> {
+	async findBySlug(slug: string): Promise<IPost | null> {
 		const targetPost = await prisma.post.findUnique({
 			where: { slug },
 			select: defaultPostSelect,
@@ -80,36 +84,33 @@ export class PostRepository implements IPostRepository {
 
 		if (!targetPost) return null;
 
-		return this.parsePrismaResponseToUnmountedPost(targetPost);
+		return this.getPost(targetPost);
 	}
 
-	async findMany(page: number): Promise<IUnmountedPost[]> {
+	async findMany(page: number): Promise<IPost[]> {
 		return (
 			await prisma.post.findMany({
 				skip: MAX_ITEMS_PER_QUERY * page,
 				take: MAX_ITEMS_PER_QUERY,
 				select: defaultPostSelect,
 			})
-		).map((item) => this.parsePrismaResponseToUnmountedPost(item));
+		).map((item) => this.getPost(item));
 	}
 
-	async findManyByPostType(
-		postType: IUnmountedPostType,
-		page: number,
-	): Promise<IUnmountedPost[]> {
+	async findManyByPostType(postTypeId: string, page: number): Promise<IPost[]> {
 		return (
 			await prisma.post.findMany({
 				skip: MAX_ITEMS_PER_QUERY * page,
 				take: MAX_ITEMS_PER_QUERY,
 				select: defaultPostSelect,
-				where: { postTypeId: postType.id },
+				where: { postTypeId: postTypeId },
 			})
-		).map((item) => this.parsePrismaResponseToUnmountedPost(item));
+		).map((item) => this.getPost(item));
 	}
 
-	async update(post: Post): Promise<void> {
+	async update(post: IPost): Promise<void> {
 		try {
-			const { tags: _tags, ...properties } = post.unpack();
+			const { tags: _tags, ...properties } = UnpackPost.run(post);
 
 			await prisma.post.update({
 				where: { id: post.id },
@@ -120,7 +121,7 @@ export class PostRepository implements IPostRepository {
 		}
 	}
 
-	async delete(post: Post): Promise<void> {
+	async delete(post: IPost): Promise<void> {
 		try {
 			await prisma.post.delete({ where: { id: post.id } });
 		} catch (err: unknown) {
@@ -128,7 +129,7 @@ export class PostRepository implements IPostRepository {
 		}
 	}
 
-	length(): Promise<number> {
+	count(): Promise<number> {
 		return prisma.post.count();
 	}
 }

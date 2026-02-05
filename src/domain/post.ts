@@ -11,11 +11,12 @@ import {
 	UrlVO,
 	UuidArrayVO,
 } from "@caffeine/models/value-objects";
+import { SlugVO } from "./value-objects/slug.value-object";
 
 export class Post extends Entity implements IPost {
 	public readonly postTypeId: string;
 	private _name: DefinedStringVO;
-	private _slug: DefinedStringVO;
+	private _slug: SlugVO;
 	private _description: DefinedStringVO;
 	private _cover: UrlVO;
 	private _tags: UuidArrayVO;
@@ -66,7 +67,7 @@ export class Post extends Entity implements IPost {
 			layer: "post@post",
 		});
 
-		this._slug = DefinedStringVO.make({
+		this._slug = SlugVO.make({
 			value: slug,
 			name: "slug",
 			layer: "post@post",
@@ -86,7 +87,7 @@ export class Post extends Entity implements IPost {
 			layer: "post@post",
 		});
 
-		this._slug = DefinedStringVO.make({
+		this._slug = SlugVO.make({
 			value: slugify(value),
 			name: "slug",
 			layer: "post@post",

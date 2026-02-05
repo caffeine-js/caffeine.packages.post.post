@@ -1,6 +1,6 @@
 import type { IEntity } from "@caffeine/models/types";
 
-export interface IUnmountedPost extends IEntity {
+export interface IUnpackedPost extends IEntity {
 	postTypeId: string;
 	name: string;
 	slug: string;

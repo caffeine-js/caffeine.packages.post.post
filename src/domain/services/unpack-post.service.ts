@@ -1,4 +1,4 @@
-import type { IPost, IUnmountedPost } from "../types";
+import type { IPost, IUnpackedPost } from "../types";
 
 export const UnpackPost = {
 	run: ({
@@ -11,7 +11,7 @@ export const UnpackPost = {
 		postTypeId,
 		slug,
 		tags,
-	}: IPost): IUnmountedPost => {
+	}: IPost): IUnpackedPost => {
 		return {
 			id,
 			createdAt,
