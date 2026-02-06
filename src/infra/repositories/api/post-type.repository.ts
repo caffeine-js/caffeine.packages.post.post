@@ -4,9 +4,11 @@ import type { PostTypeRoutes } from "@caffeine-packages/post.post-type/presentat
 import { treaty } from "@elysiajs/eden";
 
 export class PostTypeRepository implements IPostTypeRepository {
-	private readonly postTagTypeService = treaty<PostTypeRoutes>(
-		process.env.POST_BASE_URL,
-	)["post-type"];
+	private readonly postTagTypeService;
+
+	public constructor(baseUrl: string) {
+		this.postTagTypeService = treaty<PostTypeRoutes>(baseUrl)["post-type"];
+	}
 
 	async findById(id: string): Promise<IUnmountedPostType | null> {
 		const targetPostTypeRequest = await this.postTagTypeService({ id }).get();

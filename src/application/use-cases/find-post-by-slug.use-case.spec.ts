@@ -68,8 +68,6 @@ describe("FindPostBySlugUseCase", () => {
 
 		const result = await useCase.run(post.slug);
 
-		console.log(result);
-
 		expect(result).toBeDefined();
 		expect(result.slug).toBe("my-post");
 		expect(result.postType.slug).toBe("blog");

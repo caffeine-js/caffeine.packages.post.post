@@ -1,15 +1,15 @@
 import { FindPostByIdUseCase } from "@/application/use-cases/find-post-by-id.use-case";
-import { PostTagRepository } from "@/infra/repositories/api/post-tag.repository";
-import { PostTypeRepository } from "@/infra/repositories/api/post-type.repository";
+import { makePostTagRepository } from "../../repositories/post-tag.repository.factory";
+import { makePostTypeRepository } from "../../repositories/post-type.repository.factory";
 import { FindPostTagsService } from "@/application/services/find-post-tags.service";
 import { FindPostTypeByIdService } from "@/application/services/find-post-type-by-id.service";
 import { PopulatePostService } from "@/application/services/populate-post.service";
 import { makePostRepository } from "../../repositories/post.repository.factory";
 
 export function makeFindPostByIdUseCase(): FindPostByIdUseCase {
-	const findPostTagsService = new FindPostTagsService(new PostTagRepository());
+	const findPostTagsService = new FindPostTagsService(makePostTagRepository());
 	const findPostTypeByIdService = new FindPostTypeByIdService(
-		new PostTypeRepository(),
+		makePostTypeRepository(),
 	);
 
 	return new FindPostByIdUseCase(

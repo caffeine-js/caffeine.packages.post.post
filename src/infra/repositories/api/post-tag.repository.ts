@@ -4,9 +4,11 @@ import type { PostTagRoutes } from "@caffeine-packages/post.post-tag/presentatio
 import { treaty } from "@elysiajs/eden";
 
 export class PostTagRepository implements IPostTagRepository {
-	private readonly postTagService = treaty<PostTagRoutes>(
-		process.env.POST_BASE_URL,
-	)["post-tag"];
+	private readonly postTagService;
+
+	public constructor(baseUrl: string) {
+		this.postTagService = treaty<PostTagRoutes>(baseUrl)["post-tag"];
+	}
 
 	async findById(id: string): Promise<IUnmountedPostTag | null> {
 		const targetPostTagRequest = await this.postTagService({

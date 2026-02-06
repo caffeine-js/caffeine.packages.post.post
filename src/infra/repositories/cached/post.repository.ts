@@ -1,55 +1,16 @@
-import { Post } from "@/domain/post";
 import { UnpackPost } from "@/domain/services";
-import type { IPost, IUnpackedPost } from "@/domain/types";
+import type { IPost } from "@/domain/types";
 import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
-import { InvalidDomainDataException } from "@caffeine/errors/domain";
-import { UnexpectedCacheValueException } from "@caffeine/errors/infra";
 import { redis } from "@caffeine/redis-drive";
+import { CachedPostMapper } from "./cached-post.mapper";
+import { CACHE_EXPIRATION_TIME } from "@caffeine/constants";
 
 export class PostRepository implements IPostRepository {
-	private postCacheExpirationTime: number = 60 * 60;
+	private postCacheExpirationTime: number = CACHE_EXPIRATION_TIME.SAFE;
 
 	constructor(private readonly repository: IPostRepository) {}
 
-	private getPost(key: string, data: string | IUnpackedPost): IPost {
-		const { id, createdAt, updatedAt, ...properties }: IUnpackedPost =
-			typeof data === "string" ? JSON.parse(data) : data;
-
-		try {
-			return Post.make(properties, { id, createdAt, updatedAt });
-		} catch (err: unknown) {
-			if (err instanceof InvalidDomainDataException)
-				throw new UnexpectedCacheValueException(
-					key,
-					err.layerName,
-					err.message,
-				);
-
-			throw err;
-		}
-	}
-
-	private getPosts(key: string, data: string): IPost[] {
-		try {
-			const posts = JSON.parse(data);
-
-			if (!Array.isArray(posts))
-				throw new UnexpectedCacheValueException(key, "post@post");
-
-			return posts.map((post) => this.getPost(key, post));
-		} catch (err: unknown) {
-			if (err instanceof InvalidDomainDataException)
-				throw new UnexpectedCacheValueException(
-					key,
-					err.layerName,
-					err.message,
-				);
-
-			throw err;
-		}
-	}
-
-	async create(post: Post): Promise<void> {
+	async create(post: IPost): Promise<void> {
 		await this.repository.create(post);
 
 		await this.invalidateListCache();
@@ -61,7 +22,7 @@ export class PostRepository implements IPostRepository {
 		if (storedPost)
 			return storedPost === null
 				? null
-				: this.getPost(`post@post::$${id}`, storedPost);
+				: CachedPostMapper.run(`post@post::$${id}`, storedPost);
 
 		const targetPost = await this.repository.findById(id);
 
@@ -73,9 +34,13 @@ export class PostRepository implements IPostRepository {
 	}
 
 	async findBySlug(slug: string): Promise<IPost | null> {
-		const storedPost = await redis.get(`post@post::${slug}`);
+		const storedId = await redis.get(`post@post::${slug}`);
 
-		if (storedPost) return this.getPost(`post@post::${slug}`, storedPost);
+		if (storedId) {
+			const post = await this.findById(storedId);
+
+			if (post && post.slug === slug) return post;
+		}
 
 		const targetPost = await this.repository.findBySlug(slug);
 
@@ -87,16 +52,23 @@ export class PostRepository implements IPostRepository {
 	}
 
 	async findMany(page: number): Promise<IPost[]> {
-		const storedPosts = await redis.get(`post@post:page::${page}`);
+		const key = `post@post:page::${page}`;
+		const storedIds = await redis.get(key);
 
-		if (storedPosts)
-			return this.getPosts(`post@post:page::${page}`, storedPosts);
+		if (storedIds) {
+			const ids: string[] = JSON.parse(storedIds);
+			return (await this.findManyByIds(ids)).filter(
+				(post): post is IPost => post !== null,
+			);
+		}
 
 		const targetPosts = await this.repository.findMany(page);
 
+		await Promise.all(targetPosts.map((post) => this.cachePost(post)));
+
 		await redis.set(
-			`post@post:page::${page}`,
-			JSON.stringify(targetPosts.map((post) => UnpackPost.run(post))),
+			key,
+			JSON.stringify(targetPosts.map((post) => post.id)),
 			"EX",
 			this.postCacheExpirationTime,
 		);
@@ -104,24 +76,68 @@ export class PostRepository implements IPostRepository {
 		return targetPosts;
 	}
 
+	async findManyByIds(ids: string[]): Promise<Array<IPost | null>> {
+		if (ids.length === 0) return [];
+
+		const keys = ids.map((id) => `post@post::$${id}`);
+		const cachedValues = await redis.mget(...keys);
+
+		const postsMap = new Map<string, IPost>();
+		const missedIds: string[] = [];
+
+		for (let i = 0; i < ids.length; i++) {
+			const id = ids[i];
+			if (!id) continue;
+
+			const cached = cachedValues[i];
+
+			if (cached) {
+				try {
+					const post = CachedPostMapper.run(`post@post::$${id}`, cached);
+					postsMap.set(id, post);
+				} catch {
+					missedIds.push(id);
+				}
+			} else {
+				missedIds.push(id);
+			}
+		}
+
+		if (missedIds.length > 0) {
+			const fetchedPosts = await this.repository.findManyByIds(missedIds);
+
+			for (const post of fetchedPosts) {
+				if (post) {
+					await this.cachePost(post);
+					postsMap.set(post.id, post);
+				}
+			}
+		}
+
+		return ids.map((id) => postsMap.get(id) ?? null);
+	}
+
 	async findManyByPostType(postTypeId: string, page: number): Promise<IPost[]> {
 		const key = `post@post:type::$${postTypeId}:page::${page}`;
-		const storedPosts = await redis.get(key);
+		const storedIds = await redis.get(key);
 
-		if (storedPosts)
-			return this.getPosts(
-				`post@post:type::$${postTypeId}:page::${page}`,
-				storedPosts,
+		if (storedIds) {
+			const ids: string[] = JSON.parse(storedIds);
+			return (await this.findManyByIds(ids)).filter(
+				(post): post is IPost => post !== null,
 			);
+		}
 
 		const targetPosts = await this.repository.findManyByPostType(
 			postTypeId,
 			page,
 		);
 
+		await Promise.all(targetPosts.map((post) => this.cachePost(post)));
+
 		await redis.set(
 			key,
-			JSON.stringify(targetPosts.map((post) => UnpackPost.run(post))),
+			JSON.stringify(targetPosts.map((post) => post.id)),
 			"EX",
 			this.postCacheExpirationTime,
 		);
@@ -129,11 +145,11 @@ export class PostRepository implements IPostRepository {
 		return targetPosts;
 	}
 
-	async update(post: Post): Promise<void> {
+	async update(post: IPost): Promise<void> {
 		const _cachedPost = await redis.get(`post@post::$${post.id}`);
 
 		if (_cachedPost) {
-			const cachedPost: IPost = this.getPost(
+			const cachedPost: IPost = CachedPostMapper.run(
 				`post@post::$${post.id}`,
 				_cachedPost,
 			);
@@ -148,7 +164,7 @@ export class PostRepository implements IPostRepository {
 		await this.invalidateListCache();
 	}
 
-	async delete(post: Post): Promise<void> {
+	async delete(post: IPost): Promise<void> {
 		await redis.del(`post@post::$${post.id}`);
 		await redis.del(`post@post::${post.slug}`);
 
@@ -171,7 +187,7 @@ export class PostRepository implements IPostRepository {
 		);
 		await redis.set(
 			`post@post::${post.slug}`,
-			JSON.stringify(post),
+			post.id,
 			"EX",
 			this.postCacheExpirationTime,
 		);

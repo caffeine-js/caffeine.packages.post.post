@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { faker } from "@faker-js/faker";
 import { PostRepository } from "./post.repository";
-import { generateUUID, slugify } from "@caffeine/models/helpers";
+import { generateUUID } from "@caffeine/models/helpers";
 import { makeEntityFactory } from "@caffeine/models/factories";
 import type { BuildPostDTO } from "@/domain/dtos/build-post.dto";
 import { Post } from "@/domain";
+import { MAX_ITEMS_PER_QUERY } from "@caffeine/constants";
 
 describe("PostRepository", () => {
 	let repository: PostRepository;
@@ -16,7 +17,6 @@ describe("PostRepository", () => {
 		return {
 			postTypeId: generateUUID(),
 			name: name,
-			slug: slugify(name),
 			description: faker.lorem.sentence(),
 			cover: faker.internet.url(),
 			tags: [generateUUID()],
@@ -93,17 +93,49 @@ describe("PostRepository", () => {
 		});
 	});
 
+	describe("findManyByIds", () => {
+		it("deve retornar posts correspondentes aos IDs fornecidos", async () => {
+			const post1 = Post.make(makeValidPostData(), makeEntityFactory());
+			const post2 = Post.make(makeValidPostData(), makeEntityFactory());
+			await repository.create(post1);
+			await repository.create(post2);
+
+			const results = await repository.findManyByIds([post1.id, post2.id]);
+
+			expect(results).toHaveLength(2);
+			expect(results[0]?.id).toBe(post1.id);
+			expect(results[1]?.id).toBe(post2.id);
+		});
+
+		it("deve retornar null para IDs não encontrados mantendo a ordem", async () => {
+			const post1 = Post.make(makeValidPostData(), makeEntityFactory());
+			await repository.create(post1);
+			const nonExistentId = generateUUID();
+
+			const results = await repository.findManyByIds([post1.id, nonExistentId]);
+
+			expect(results).toHaveLength(2);
+			expect(results[0]?.id).toBe(post1.id);
+			expect(results[1]).toBeNull();
+		});
+
+		it("deve retornar array vazio se lista de IDs for vazia", async () => {
+			const results = await repository.findManyByIds([]);
+			expect(results).toHaveLength(0);
+		});
+	});
+
 	describe("findMany", () => {
 		it("deve retornar posts paginados", async () => {
-			// Create 15 posts
-			for (let i = 0; i < 15; i++) {
+			// Create MAX_ITEMS_PER_QUERY + 5 posts
+			for (let i = 0; i < MAX_ITEMS_PER_QUERY + 5; i++) {
 				await repository.create(
 					Post.make(makeValidPostData(), makeEntityFactory()),
 				);
 			}
 
 			const page1 = await repository.findMany(1);
-			expect(page1).toHaveLength(10);
+			expect(page1).toHaveLength(MAX_ITEMS_PER_QUERY);
 
 			const page2 = await repository.findMany(2);
 			expect(page2).toHaveLength(5);
@@ -120,8 +152,8 @@ describe("PostRepository", () => {
 			const targetTypeId = generateUUID();
 			const otherTypeId = generateUUID();
 
-			// Create 15 posts of target type
-			for (let i = 0; i < 15; i++) {
+			// Create MAX_ITEMS_PER_QUERY + 5 posts of target type
+			for (let i = 0; i < MAX_ITEMS_PER_QUERY + 5; i++) {
 				const data = makeValidPostData({ postTypeId: targetTypeId });
 				await repository.create(Post.make(data, makeEntityFactory()));
 			}
@@ -136,7 +168,7 @@ describe("PostRepository", () => {
 			const postTypeMock = targetTypeId;
 
 			const page1 = await repository.findManyByPostType(postTypeMock, 1);
-			expect(page1).toHaveLength(10);
+			expect(page1).toHaveLength(MAX_ITEMS_PER_QUERY);
 			page1.map((p) => expect(p.postTypeId).toBe(targetTypeId));
 
 			const page2 = await repository.findManyByPostType(postTypeMock, 2);

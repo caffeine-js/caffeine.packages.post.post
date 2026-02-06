@@ -2,6 +2,7 @@ import { Post } from "@/domain";
 import { UnpackPost } from "@/domain/services";
 import type { IPost, IUnpackedPost } from "@/domain/types";
 import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
+import { MAX_ITEMS_PER_QUERY } from "@caffeine/constants";
 
 /**
  * Repositório InMemory para testes da entidade Post.
@@ -16,7 +17,7 @@ export class PostRepository implements IPostRepository {
 	/**
 	 * Tamanho padrão de página para paginação
 	 */
-	private readonly PAGE_SIZE = 10;
+	private readonly PAGE_SIZE = MAX_ITEMS_PER_QUERY;
 
 	/**
 	 * Cria um novo post no repositório
@@ -56,6 +57,19 @@ export class PostRepository implements IPostRepository {
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * Busca diversos posts por seus IDs
+	 * @param ids - Array de IDs dos posts
+	 * @returns Array com posts encontrados ou null para IDs inexistentes, na mesma ordem
+	 */
+	async findManyByIds(ids: string[]): Promise<Array<IPost | null>> {
+		return ids.map((id) => {
+			const raw = this.posts.get(id);
+			if (!raw) return null;
+			return this.hydrate(raw);
+		});
 	}
 
 	/**

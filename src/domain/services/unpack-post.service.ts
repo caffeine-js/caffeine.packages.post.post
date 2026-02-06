@@ -24,4 +24,4 @@ export const UnpackPost = {
 			tags,
 		};
 	},
-};
+} as const;

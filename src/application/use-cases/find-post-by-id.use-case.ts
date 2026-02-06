@@ -1,12 +1,11 @@
-import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
-
 import { ResourceNotFoundException } from "@caffeine/errors/application";
 import type { ICompletePost } from "../types/complete-post.interface";
 import type { PopulatePostService } from "../services/populate-post.service";
+import type { IPostReader } from "@/domain/types/repositories/post-reader.interface";
 
 export class FindPostByIdUseCase {
 	public constructor(
-		private readonly repository: IPostRepository,
+		private readonly repository: IPostReader,
 		private readonly populatePost: PopulatePostService,
 	) {}
 
