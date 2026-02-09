@@ -112,4 +112,9 @@ export class PostRepository implements IPostRepository {
 	count(): Promise<number> {
 		return prisma.post.count();
 	}
+
+	@SafePrisma("post@post")
+	countByPostType(postTypeId: string): Promise<number> {
+		return prisma.post.count({ where: { postTypeId } });
+	}
 }

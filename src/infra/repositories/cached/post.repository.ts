@@ -176,6 +176,10 @@ export class PostRepository implements IPostRepository {
 		return this.repository.count();
 	}
 
+	countByPostType(postType: string): Promise<number> {
+		return this.repository.countByPostType(postType);
+	}
+
 	private async cachePost(_post: IPost): Promise<void> {
 		const post = UnpackPost.run(_post);
 

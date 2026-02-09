@@ -7,4 +7,5 @@ export interface IPostReader {
 	findMany(page: number): Promise<IPost[]>;
 	findManyByPostType(postTypeId: string, page: number): Promise<IPost[]>;
 	count(): Promise<number>;
+	countByPostType(postTypeId: string): Promise<number>;
 }

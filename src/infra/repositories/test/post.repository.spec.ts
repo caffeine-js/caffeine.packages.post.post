@@ -244,6 +244,44 @@ describe("PostRepository", () => {
 		});
 	});
 
+	describe("countByPostType", () => {
+		it("deve contar apenas posts do tipo especificado", async () => {
+			const type1 = generateUUID();
+			const type2 = generateUUID();
+
+			const post1 = Post.make(
+				makeValidPostData({ postTypeId: type1 }),
+				makeEntityFactory(),
+			);
+			const post2 = Post.make(
+				makeValidPostData({ postTypeId: type1 }),
+				makeEntityFactory(),
+			);
+			const post3 = Post.make(
+				makeValidPostData({ postTypeId: type2 }),
+				makeEntityFactory(),
+			);
+
+			await repository.create(post1);
+			await repository.create(post2);
+			await repository.create(post3);
+
+			expect(await repository.countByPostType(type1)).toBe(2);
+			expect(await repository.countByPostType(type2)).toBe(1);
+		});
+
+		it("deve retornar 0 se não houver posts do tipo", async () => {
+			const type1 = generateUUID();
+			const post = Post.make(
+				makeValidPostData({ postTypeId: type1 }),
+				makeEntityFactory(),
+			);
+			await repository.create(post);
+
+			expect(await repository.countByPostType(generateUUID())).toBe(0);
+		});
+	});
+
 	describe("getAll (auxiliary)", () => {
 		it("deve retornar todos os posts", async () => {
 			await repository.create(

@@ -4,26 +4,11 @@ import type { IPost, IUnpackedPost } from "@/domain/types";
 import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
 import { MAX_ITEMS_PER_QUERY } from "@caffeine/constants";
 
-/**
- * Repositório InMemory para testes da entidade Post.
- * Armazena posts em memória usando um Map para acesso eficiente.
- */
 export class PostRepository implements IPostRepository {
-	/**
-	 * Armazena os posts em memória, indexados por ID para busca O(1)
-	 */
 	private posts: Map<string, IUnpackedPost> = new Map();
 
-	/**
-	 * Tamanho padrão de página para paginação
-	 */
 	private readonly PAGE_SIZE = MAX_ITEMS_PER_QUERY;
 
-	/**
-	 * Cria um novo post no repositório
-	 * @param post - Instância de Post a ser criada
-	 * @throws Error se já existe um post com o mesmo ID
-	 */
 	async create(post: IPost): Promise<void> {
 		const unpacked = UnpackPost.run(post);
 
@@ -34,22 +19,12 @@ export class PostRepository implements IPostRepository {
 		this.posts.set(unpacked.id, unpacked);
 	}
 
-	/**
-	 * Busca um post por ID
-	 * @param id - ID do post
-	 * @returns Post encontrado ou null se não existir
-	 */
 	async findById(id: string): Promise<IPost | null> {
 		const raw = this.posts.get(id);
 		if (!raw) return null;
 		return this.hydrate(raw);
 	}
 
-	/**
-	 * Busca um post por slug
-	 * @param slug - Slug do post
-	 * @returns Post encontrado ou null se não existir
-	 */
 	async findBySlug(slug: string): Promise<IPost | null> {
 		for (const post of this.posts.values()) {
 			if (post.slug === slug) {
@@ -59,11 +34,6 @@ export class PostRepository implements IPostRepository {
 		return null;
 	}
 
-	/**
-	 * Busca diversos posts por seus IDs
-	 * @param ids - Array de IDs dos posts
-	 * @returns Array com posts encontrados ou null para IDs inexistentes, na mesma ordem
-	 */
 	async findManyByIds(ids: string[]): Promise<Array<IPost | null>> {
 		return ids.map((id) => {
 			const raw = this.posts.get(id);
@@ -72,23 +42,12 @@ export class PostRepository implements IPostRepository {
 		});
 	}
 
-	/**
-	 * Lista posts com paginação
-	 * @param page - Número da página (começa em 1)
-	 * @returns Array de posts da página solicitada
-	 */
 	async findMany(page: number): Promise<IPost[]> {
 		const allPosts = Array.from(this.posts.values());
 		const paginatedCalls = this.paginate(allPosts, page);
 		return paginatedCalls.map((p) => this.hydrate(p));
 	}
 
-	/**
-	 * Lista posts de um tipo específico com paginação
-	 * @param postType - Tipo de post para filtrar
-	 * @param page - Número da página (começa em 1)
-	 * @returns Array de posts do tipo especificado na página solicitada
-	 */
 	async findManyByPostType(postTypeId: string, page: number): Promise<IPost[]> {
 		const filteredPosts = Array.from(this.posts.values()).filter(
 			(post) => post.postTypeId === postTypeId,
@@ -97,11 +56,6 @@ export class PostRepository implements IPostRepository {
 		return paginated.map((p) => this.hydrate(p));
 	}
 
-	/**
-	 * Atualiza um post existente
-	 * @param post - Instância de Post com dados atualizados
-	 * @throws Error se o post não existe
-	 */
 	async update(post: IPost): Promise<void> {
 		const unpacked: IUnpackedPost = {
 			id: post.id,
@@ -122,11 +76,6 @@ export class PostRepository implements IPostRepository {
 		this.posts.set(unpacked.id, unpacked);
 	}
 
-	/**
-	 * Remove um post do repositório
-	 * @param post - Instância de Post a ser removida
-	 * @throws Error se o post não existe
-	 */
 	async delete(post: IPost): Promise<void> {
 		if (!this.posts.has(post.id)) {
 			throw new Error(`Post com ID ${post.id} não encontrado`);
@@ -135,39 +84,26 @@ export class PostRepository implements IPostRepository {
 		this.posts.delete(post.id);
 	}
 
-	/**
-	 * Retorna o número total de posts no repositório
-	 * @returns Quantidade de posts armazenados
-	 */
 	async count(): Promise<number> {
 		return this.posts.size;
 	}
 
-	/**
-	 * Método auxiliar para paginação
-	 * @param items - Array de items a paginar
-	 * @param page - Número da página (começa em 1)
-	 * @returns Array de items da página solicitada
-	 */
+	async countByPostType(postTypeId: string): Promise<number> {
+		return Array.from(this.posts.values()).filter(
+			(post) => post.postTypeId === postTypeId,
+		).length;
+	}
+
 	private paginate(items: IUnpackedPost[], page: number): IUnpackedPost[] {
 		const startIndex = (page - 1) * this.PAGE_SIZE;
 		const endIndex = startIndex + this.PAGE_SIZE;
 		return items.slice(startIndex, endIndex);
 	}
 
-	/**
-	 * Método auxiliar para limpar o repositório (útil para testes)
-	 * Não faz parte da interface IPostRepository
-	 */
 	clear(): void {
 		this.posts.clear();
 	}
 
-	/**
-	 * Método auxiliar para obter todos os posts (útil para testes)
-	 * Não faz parte da interface IPostRepository
-	 * @returns Array com todos os posts armazenados
-	 */
 	getAll(): IUnpackedPost[] {
 		return Array.from(this.posts.values());
 	}
