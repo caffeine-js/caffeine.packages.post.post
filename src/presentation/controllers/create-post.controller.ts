@@ -16,7 +16,7 @@ export const CreatePostController = new Elysia()
 				tags: ["Post"],
 				summary: "Create a new post",
 				description:
-					"Creates a new post with the provided metadata, tags, and type. Requires authentication.",
+					"Creates a new post resource. The request body must include the post type and necessary metadata. Authentication is required.",
 			},
 			response: {
 				201: CompletePostDTO,

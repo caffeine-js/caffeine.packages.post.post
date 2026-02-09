@@ -1,5 +1,5 @@
 import { t } from "@caffeine/models";
-import { PaginationDTO } from "@caffeine/models/dtos";
+import { PaginationDTO } from "@caffeine/models/dtos/api";
 
 export const FindManyPostsByPostTypeDTO = t.Composite(
 	[

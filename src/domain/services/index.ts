@@ -1,2 +1,4 @@
 export { BuildPost } from "./build-post.service";
 export { UnpackPost } from "./unpack-post.service";
+export { PostUniquenessChecker } from "./post-uniqueness-checker.service";
+export { PaginationService } from "./pagination.service";

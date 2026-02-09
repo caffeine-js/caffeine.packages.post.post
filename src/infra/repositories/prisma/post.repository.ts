@@ -109,7 +109,7 @@ export class PostRepository implements IPostRepository {
 	}
 
 	@SafePrisma("post@post")
-	count(): Promise<number> {
+	async count(): Promise<number> {
 		return prisma.post.count();
 	}
 
