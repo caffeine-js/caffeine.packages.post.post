@@ -9,8 +9,8 @@ import {
 	DefinedStringVO,
 	UrlVO,
 	UuidArrayVO,
+	SlugVO,
 } from "@caffeine/models/value-objects";
-import { SlugVO } from "./value-objects/slug.value-object";
 
 export class Post extends Entity implements IPost {
 	public readonly postTypeId: string;
