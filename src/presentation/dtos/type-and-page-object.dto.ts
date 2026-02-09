@@ -1,5 +1,5 @@
+import { t } from "@caffeine/models";
 import { UuidDTO } from "@caffeine/models/dtos/primitives";
-import { t } from "elysia";
 
 export const TypeAndPageObjectDTO = t.Object({
 	type: t.Optional(

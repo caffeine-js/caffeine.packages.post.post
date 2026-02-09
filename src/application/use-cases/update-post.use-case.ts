@@ -9,8 +9,9 @@ import {
 import type { PostUniquenessChecker } from "@/domain/services/post-uniqueness-checker.service";
 import { slugify } from "@caffeine/models/helpers";
 import type { PopulatePostService } from "../services/populate-post.service";
+import { IdentifierService } from "@/domain/services";
 
-export class UpdatePostByIdUseCase {
+export class UpdatePostUseCase {
 	public constructor(
 		private readonly repository: IPostRepository,
 		private readonly postUniquenessChecker: PostUniquenessChecker,
@@ -21,7 +22,9 @@ export class UpdatePostByIdUseCase {
 		id: string,
 		{ cover, description, name, tags: _tags }: UpdatePostDTO,
 	): Promise<ICompletePost> {
-		const _targetPost = await this.repository.findById(id);
+		const _targetPost = IdentifierService.isUUID(id)
+			? await this.repository.findById(id)
+			: await this.repository.findBySlug(id);
 
 		if (!_targetPost) throw new ResourceNotFoundException("post@post");
 

@@ -4,14 +4,12 @@ import { DeletePostController } from "./controllers/delete-post.controller";
 import { FindPostsController } from "./controllers/find-posts.controller";
 import { FindPostController } from "./controllers/find-post.controller";
 import { UpdatePostController } from "./controllers/update-post.controller";
-import { PostMetadataController } from "./controllers/post-metadata.controller";
 
 export const PostRoutes = new Elysia({ prefix: "/post" })
 	.use(CreatePostController)
 	.use(DeletePostController)
 	.use(FindPostsController)
 	.use(FindPostController)
-	.use(PostMetadataController)
 	.use(UpdatePostController);
 
 export type PostRoutes = typeof PostRoutes;

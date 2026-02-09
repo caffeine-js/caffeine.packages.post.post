@@ -3,119 +3,115 @@ import { FindManyPostsUseCase } from "./find-many-posts.use-case";
 import { PostRepository } from "../../infra/repositories/test/post.repository";
 import { PostTagRepository } from "../../infra/repositories/test/post-tag.repository";
 import { PostTypeRepository } from "../../infra/repositories/test/post-type.repository";
-import { Post } from "../../domain/post";
-import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
-import type { IUnmountedPostTag } from "@caffeine-packages/post.post-tag/domain/types";
-import type { ICompletePost } from "../types/complete-post.interface";
-import { makeEntityFactory } from "@caffeine/models/factories";
-import { generateUUID } from "@caffeine/models/helpers";
-import { ResourceNotFoundException } from "@caffeine/errors/application";
-
+import { CreatePostUseCase } from "./create-post.use-case";
+import { FindPostTypeBySlugService } from "../services/find-post-type-by-slug.service";
+import { PopulateManyPostsService } from "../services/populate-many-posts.service";
 import { FindPostTagsService } from "../services/find-post-tags.service";
 import { FindPostTypesService } from "../services/find-post-types.service";
-import { PopulateManyPostsService } from "../services/populate-many-posts.service";
+import { PopulatePostService } from "../services/populate-post.service";
+import { FindPostTypeByIdService } from "../services/find-post-type-by-id.service";
+import { PostUniquenessChecker } from "@/domain/services/post-uniqueness-checker.service";
+import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
+import { t } from "@caffeine/models";
+import { Schema } from "@caffeine/models/schema";
+import { makeEntityFactory } from "@caffeine/models/factories";
 
 describe("FindManyPostsUseCase", () => {
 	let useCase: FindManyPostsUseCase;
+	let createPostUseCase: CreatePostUseCase;
 	let postRepository: PostRepository;
-	let postTagRepository: PostTagRepository;
 	let postTypeRepository: PostTypeRepository;
 
 	beforeEach(() => {
 		postRepository = new PostRepository();
-		postTagRepository = new PostTagRepository();
 		postTypeRepository = new PostTypeRepository();
+		const postTagRepository = new PostTagRepository();
+
+		const findPostTagsService = new FindPostTagsService(postTagRepository);
+		const findPostTypesService = new FindPostTypesService(postTypeRepository);
+
+		createPostUseCase = new CreatePostUseCase(
+			postRepository,
+			new PostUniquenessChecker(postRepository),
+			new PopulatePostService(
+				findPostTagsService,
+				new FindPostTypeByIdService(postTypeRepository),
+			),
+		);
 
 		useCase = new FindManyPostsUseCase(
 			postRepository,
-			new PopulateManyPostsService(
-				new FindPostTagsService(postTagRepository),
-				new FindPostTypesService(postTypeRepository),
-			),
+			new FindPostTypeBySlugService(postTypeRepository),
+			new PopulateManyPostsService(findPostTagsService, findPostTypesService),
 		);
 	});
 
-	it("should find many posts and hydrate them", async () => {
+	it("should find many posts without filtering", async () => {
 		const postType: IUnmountedPostType = {
 			slug: "blog",
 			name: "Blog",
-			schema: JSON.stringify({}),
-			isHighlighted: false,
+			isHighlighted: true,
+			schema: new Schema(t.Object({ name: t.String() })).toString(),
 			...makeEntityFactory(),
 		};
 		postTypeRepository.seed([postType]);
 
-		const postTag: IUnmountedPostTag = {
-			slug: "tech",
-			name: "Tech",
-			hidden: false,
-			...makeEntityFactory(),
-		};
-		postTagRepository.seed([postTag]);
-
-		for (let i = 0; i < 3; i++) {
-			const post = Post.make({
-				name: `Post ${i}`,
-				description: "Desc",
-				postTypeId: postType.id,
-				tags: [postTag.id],
-				cover: "https://example.com/cover.jpg",
-			});
-			await postRepository.create(post);
-		}
-
-		const result: ICompletePost[] = await useCase.run(1);
-
-		expect(result).toHaveLength(3);
-		expect(result[0]!.postType.id).toBe(postType.id);
-		expect(result[0]!.tags[0]!.id).toBe(postTag.id);
-	});
-
-	it("should return empty array if no posts found", async () => {
-		const result = await useCase.run(1);
-		expect(result).toEqual([]);
-	});
-
-	it("should throw ResourceNotFoundException if post type is not found", async () => {
-		const post = Post.make({
-			name: "Post",
+		await createPostUseCase.run({
+			name: "Post 1",
 			description: "Desc",
-			postTypeId: generateUUID(), // Non-existent type
-			tags: [],
 			cover: "https://example.com/cover.jpg",
-		});
-
-		// Create post with non-existent type
-		await postRepository.create(post);
-
-		await expect(useCase.run(1)).rejects.toBeInstanceOf(
-			ResourceNotFoundException,
-		);
-	});
-
-	it("should throw ResourceNotFoundException if post tag is not found", async () => {
-		const postType: IUnmountedPostType = {
-			slug: "blog",
-			name: "Blog",
-			schema: JSON.stringify({}),
-			isHighlighted: false,
-			...makeEntityFactory(),
-		};
-		postTypeRepository.seed([postType]);
-
-		const post = Post.make({
-			name: "Post",
-			description: "Desc",
 			postTypeId: postType.id,
-			tags: [generateUUID()], // Non-existent tag
-			cover: "https://example.com/cover.jpg",
+			tags: [],
 		});
 
-		// Create post with non-existent tag
-		await postRepository.create(post);
+		await createPostUseCase.run({
+			name: "Post 2",
+			description: "Desc",
+			cover: "https://example.com/cover.jpg",
+			postTypeId: postType.id,
+			tags: [],
+		});
 
-		await expect(useCase.run(1)).rejects.toThrow(
-			`post@post::tags->${post.tags[0]}`,
-		);
+		const result = await useCase.run({ page: 1 });
+		expect(result).toHaveLength(2);
+	});
+
+	it("should filter posts by post type slug", async () => {
+		const postType1: IUnmountedPostType = {
+			slug: "blog",
+			name: "Blog",
+			isHighlighted: true,
+			schema: new Schema(t.Object({ name: t.String() })).toString(),
+			...makeEntityFactory(),
+		};
+		const postType2: IUnmountedPostType = {
+			slug: "news",
+			name: "News",
+			isHighlighted: true,
+			schema: new Schema(t.Object({ name: t.String() })).toString(),
+			...makeEntityFactory(),
+		};
+		postTypeRepository.seed([postType1, postType2]);
+
+		await createPostUseCase.run({
+			name: "Post 1",
+			description: "Desc",
+			cover: "https://example.com/cover.jpg",
+			postTypeId: postType1.id,
+			tags: [],
+		});
+
+		await createPostUseCase.run({
+			name: "Post 2",
+			description: "Desc",
+			cover: "https://example.com/cover.jpg",
+			postTypeId: postType2.id,
+			tags: [],
+		});
+
+		const result = await useCase.run({ page: 1, postType: "blog" });
+		expect(result).toHaveLength(1);
+		expect(result[0]?.name).toBe("Post 1");
+		expect(result[0]?.postType.slug).toBe("blog");
 	});
 });

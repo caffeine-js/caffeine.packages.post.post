@@ -1,4 +1,4 @@
-import { CreatePostUseCase } from "@/application/use-cases/create-post.use-case";
+import { UpdatePostUseCase } from "@/application/use-cases/update-post.use-case";
 import { makePostRepository } from "../../repositories/post.repository.factory";
 import { PostUniquenessChecker } from "@/domain/services/post-uniqueness-checker.service";
 import { PopulatePostService } from "@/application/services/populate-post.service";
@@ -7,12 +7,12 @@ import { makePostTagRepository } from "../../repositories/post-tag.repository.fa
 import { FindPostTypeByIdService } from "@/application/services/find-post-type-by-id.service";
 import { makePostTypeRepository } from "../../repositories/post-type.repository.factory";
 
-export function makeCreatePostUseCase(): CreatePostUseCase {
+export function makeUpdatePostUseCase(): UpdatePostUseCase {
 	const postRepository = makePostRepository();
 	const postTagRepository = makePostTagRepository();
 	const postTypeRepository = makePostTypeRepository();
 
-	return new CreatePostUseCase(
+	return new UpdatePostUseCase(
 		postRepository,
 		new PostUniquenessChecker(postRepository),
 		new PopulatePostService(
