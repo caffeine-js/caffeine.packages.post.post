@@ -37,7 +37,6 @@ Use the static `Post.make()` method to create new instances, ensuring that all v
 
 Services located in `/services` encapsulate specific logic:
 
-- **BuildPost**: Service responsible for reconstituting a `Post` entity from raw data (e.g., from the database), preserving IDs and dates (`createdAt`, `updatedAt`).
 - **PostUniquenessChecker**: Verifies the uniqueness of a post in the system, usually by checking if the slug is already in use via an `IPostReader`.
 - **UnpackPost**: Converts a `Post` domain entity back into a simple object (DTO), useful for persistence or API responses.
 
