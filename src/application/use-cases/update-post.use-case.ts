@@ -9,7 +9,7 @@ import {
 import type { PostUniquenessChecker } from "@/domain/services/post-uniqueness-checker.service";
 import { slugify } from "@caffeine/models/helpers";
 import type { PopulatePostService } from "../services/populate-post.service";
-import { IdentifierService } from "@/domain/services";
+import { detectEntry } from "@caffeine/api-utils/utils";
 
 export class UpdatePostUseCase {
 	public constructor(
@@ -22,9 +22,10 @@ export class UpdatePostUseCase {
 		id: string,
 		{ cover, description, name, tags: _tags }: UpdatePostDTO,
 	): Promise<ICompletePost> {
-		const _targetPost = IdentifierService.isUUID(id)
-			? await this.repository.findById(id)
-			: await this.repository.findBySlug(id);
+		const _targetPost =
+			detectEntry(id) === "UUID"
+				? await this.repository.findById(id)
+				: await this.repository.findBySlug(id);
 
 		if (!_targetPost) throw new ResourceNotFoundException("post@post");
 
