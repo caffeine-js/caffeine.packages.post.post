@@ -1,9 +1,7 @@
 import { Entity } from "@caffeine/models";
 import type { EntityDTO } from "@caffeine/models/dtos";
-import { InvalidDomainDataException } from "@caffeine/errors/domain";
 import { makeEntityFactory } from "@caffeine/models/factories";
-import { Schema } from "@caffeine/models/schema";
-import { BuildPostDTO } from "./dtos/build-post.dto";
+import type { BuildPostDTO } from "./dtos/build-post.dto";
 import type { IPost } from "./types";
 import {
 	DefinedStringVO,
@@ -119,10 +117,9 @@ export class Post extends Entity implements IPost {
 		initialProperties: BuildPostDTO,
 		entityProps?: EntityDTO,
 	): IPost {
-		if (!Schema.make(BuildPostDTO).match(initialProperties))
-			throw new InvalidDomainDataException("post@post");
-
 		entityProps = entityProps ?? makeEntityFactory();
+
+		Entity.prepare(entityProps);
 
 		return new Post(initialProperties, entityProps);
 	}

@@ -1,17 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { Post } from "./post";
-import { generateUUID } from "@caffeine/models/helpers";
-import {
-	InvalidDomainDataException,
-	InvalidPropertyException,
-} from "@caffeine/errors/domain";
+import { generateUUID, slugify } from "@caffeine/models/helpers";
+import { InvalidPropertyException } from "@caffeine/errors/domain";
 import type { BuildPostDTO } from "./dtos/build-post.dto";
 
 describe("Post Entity", () => {
 	const validProps: BuildPostDTO = {
 		name: "My First Post",
 		description: "A description",
-		slug: "my-first-post",
 		cover: "https://example.com/image.jpg",
 		postTypeId: generateUUID(),
 		tags: [generateUUID()],
@@ -24,7 +20,7 @@ describe("Post Entity", () => {
 			expect(post).toBeInstanceOf(Post);
 			expect(post.name).toBe(validProps.name);
 			expect(post.description).toBe(validProps.description);
-			expect(post.slug).toBe(validProps.slug);
+			expect(post.slug).toBe(slugify(validProps.name));
 			expect(post.cover).toBe(validProps.cover);
 			expect(post.postTypeId).toBe(validProps.postTypeId);
 			expect(post.tags).toEqual(validProps.tags);
@@ -32,14 +28,14 @@ describe("Post Entity", () => {
 			expect(post.createdAt).toBeDefined();
 		});
 
-		it("should throw InvalidDomainDataException if props are invalid (invalid cover url)", () => {
+		it("should throw InvalidPropertyException if props are invalid (invalid cover url)", () => {
 			const invalidProps = { ...validProps, cover: "invalid-url" };
-			expect(() => Post.make(invalidProps)).toThrow(InvalidDomainDataException);
+			expect(() => Post.make(invalidProps)).toThrow(InvalidPropertyException);
 		});
 
-		it("should throw InvalidDomainDataException if props are invalid (invalid tag uuid)", () => {
+		it("should throw InvalidPropertyException if props are invalid (invalid tag uuid)", () => {
 			const invalidProps = { ...validProps, tags: ["invalid-uuid"] };
-			expect(() => Post.make(invalidProps)).toThrow(InvalidDomainDataException);
+			expect(() => Post.make(invalidProps)).toThrow(InvalidPropertyException);
 		});
 	});
 
