@@ -48,46 +48,39 @@ export class Post extends Entity implements IPost {
 
 		this.postTypeId = postTypeId;
 
-		this._cover = UrlVO.make({
-			value: cover,
+		this._cover = UrlVO.make(cover, {
 			name: "cover",
 			layer: "post@post",
 		});
 
-		this._description = DefinedStringVO.make({
-			value: description,
+		this._description = DefinedStringVO.make(description, {
 			name: "description",
 			layer: "post@post",
 		});
 
-		this._name = DefinedStringVO.make({
-			value: name,
+		this._name = DefinedStringVO.make(name, {
 			name: "name",
 			layer: "post@post",
 		});
 
-		this._slug = SlugVO.make({
-			value: name,
+		this._slug = SlugVO.make(name, {
 			name: "slug",
 			layer: "post@post",
 		});
 
-		this._tags = UuidArrayVO.make({
-			value: tags,
+		this._tags = UuidArrayVO.make(tags, {
 			name: "tags",
 			layer: "post@post",
 		});
 	}
 
 	rename(value: string): void {
-		this._name = DefinedStringVO.make({
-			value: value,
+		this._name = DefinedStringVO.make(value, {
 			name: "name",
 			layer: "post@post",
 		});
 
-		this._slug = SlugVO.make({
-			value: value,
+		this._slug = SlugVO.make(value, {
 			name: "slug",
 			layer: "post@post",
 		});
@@ -96,8 +89,7 @@ export class Post extends Entity implements IPost {
 	}
 
 	updateDescription(value: string): void {
-		this._description = DefinedStringVO.make({
-			value: value,
+		this._description = DefinedStringVO.make(value, {
 			name: "description",
 			layer: "post@post",
 		});
@@ -106,8 +98,7 @@ export class Post extends Entity implements IPost {
 	}
 
 	updateCover(value: string): void {
-		this._cover = UrlVO.make({
-			value: value,
+		this._cover = UrlVO.make(value, {
 			name: "cover",
 			layer: "post@post",
 		});
@@ -116,8 +107,7 @@ export class Post extends Entity implements IPost {
 	}
 
 	updateTags(values: string[]): void {
-		this._tags = UuidArrayVO.make({
-			value: values,
+		this._tags = UuidArrayVO.make(values, {
 			name: "tags",
 			layer: "post@post",
 		});
