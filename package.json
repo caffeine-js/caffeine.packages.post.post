@@ -1,5 +1,6 @@
 {
   "name": "@caffeine-packages/post.post",
+  "version": "0.1",
   "type": "module",
   "author": {
     "name": "Alan Reis",
