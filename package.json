@@ -56,6 +56,7 @@
     "@caffeine-packages/post.db.prisma-drive": "link:@caffeine-packages/post.db.prisma-drive",
     "@caffeine-packages/post.post-tag": "link:@caffeine-packages/post.post-tag",
     "@caffeine-packages/post.post-type": "link:@caffeine-packages/post.post-type",
+    "@caffeine/api-utils": "link:@caffeine/api-utils",
     "@caffeine/auth": "link:@caffeine/auth",
     "@caffeine/constants": "link:@caffeine/constants",
     "@caffeine/errors": "link:@caffeine/errors",

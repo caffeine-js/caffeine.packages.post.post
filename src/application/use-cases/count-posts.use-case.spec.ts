@@ -12,7 +12,7 @@ import { PostUniquenessChecker } from "@/domain/services/post-uniqueness-checker
 import { PopulatePostService } from "../services/populate-post.service";
 import { FindPostTagsService } from "../services/find-post-tags.service";
 import { FindPostTypeByIdService } from "../services/find-post-type-by-id.service";
-import { PaginationService } from "@/domain/services";
+import { PaginationService } from "@caffeine/api-utils/services";
 
 describe("CountPostsUseCase", () => {
 	let useCase: CountPostsUseCase;

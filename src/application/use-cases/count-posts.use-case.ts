@@ -1,5 +1,5 @@
-import { PaginationService } from "@/domain/services";
 import type { IPostReader } from "@/domain/types/repositories/post-reader.interface";
+import { PaginationService } from "@caffeine/api-utils/services";
 
 type ICountPosts = {
 	totalPages: number;
