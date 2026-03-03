@@ -1,34 +1,31 @@
 import type { IPostTypeRepository } from "@/domain/types/repositories/post-type-repository.interface";
-import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
-import type { PostTypeRoutes } from "@caffeine-packages/post.post-type/presentation";
+import type { IPostType } from "@caffeine-packages/post.post-type/domain/types";
+import type { PostTypeRoutes } from "@caffeine-packages/post.post-type/presentation/routes";
 import { treaty } from "@elysiajs/eden";
+import { PostType } from "@caffeine-packages/post.post-type/domain";
 
 export class PostTypeRepository implements IPostTypeRepository {
-	private readonly postTagTypeService;
+    private readonly postTagTypeService: ReturnType<
+        typeof treaty<PostTypeRoutes>
+    >["post-types"];
 
-	public constructor(baseUrl: string) {
-		this.postTagTypeService = treaty<PostTypeRoutes>(baseUrl)["post-type"];
-	}
+    public constructor(baseUrl: string) {
+        this.postTagTypeService = treaty<PostTypeRoutes>(baseUrl)["post-types"];
+    }
 
-	async findById(id: string): Promise<IUnmountedPostType | null> {
-		const targetPostTypeRequest = await this.postTagTypeService({ id }).get();
+    async find(idOrSlug: string): Promise<IPostType | null> {
+        const { data, status, error } = await this.postTagTypeService({
+            "id-or-slug": idOrSlug,
+        }).get();
 
-		if (targetPostTypeRequest.error) throw targetPostTypeRequest.error.value;
+        if (error) throw error.value;
+        if (status !== 200) return null;
 
-		if (targetPostTypeRequest.status !== 200) return null;
+        const { isHighlighted, name, schema, slug, ...entityProps } = data;
 
-		return targetPostTypeRequest.data;
-	}
-
-	async findBySlug(slug: string): Promise<IUnmountedPostType | null> {
-		const targetPostTypeRequest = await this.postTagTypeService["by-slug"]({
-			slug,
-		}).get();
-
-		if (targetPostTypeRequest.error) throw targetPostTypeRequest.error.value;
-
-		if (targetPostTypeRequest.status !== 200) return null;
-
-		return targetPostTypeRequest.data;
-	}
+        return PostType.make(
+            { isHighlighted, name, schema, slug },
+            entityProps,
+        );
+    }
 }

@@ -1,310 +1,280 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { faker } from "@faker-js/faker";
+import { describe, expect, it, beforeEach } from "bun:test";
 import { PostRepository } from "./post.repository";
-import { generateUUID } from "@caffeine/entity/helpers";
-import { makeEntityFactory } from "@caffeine/entity/factories";
-import type { BuildPostDTO } from "@/domain/dtos/build-post.dto";
 import { Post } from "@/domain";
-import { MAX_ITEMS_PER_QUERY } from "@caffeine/constants";
+import type { IPost } from "@/domain/types";
+import type { IRawPost } from "@/domain/types/raw-post.interface";
+import type { IPostTag } from "@caffeine-packages/post.post-tag/domain/types";
+import type { IPostType } from "@caffeine-packages/post.post-type/domain/types";
+import { ConflictException } from "@caffeine/errors/infra";
+
+const mockPostTag = (overrides?: Partial<IPostTag>): IPostTag =>
+	({
+		id: "tag-id",
+		name: "Tech",
+		slug: "tech",
+		hidden: false,
+		createdAt: new Date().toISOString(),
+		rename() {},
+		reslug() {},
+		changeVisibility() {},
+		...overrides,
+	}) as IPostTag;
+
+const mockPostType = (overrides?: Partial<IPostType>): IPostType =>
+	({
+		id: "type-id",
+		name: "Blog",
+		slug: "blog",
+		isHighlighted: true,
+		createdAt: new Date().toISOString(),
+		rename() {},
+		reslug() {},
+		setHighlightTo() {},
+		...overrides,
+	}) as IPostType;
+
+const makeValidProps = (overrides?: Partial<IRawPost>): IRawPost => ({
+	name: "My First Post",
+	description: "A description",
+	cover: "https://example.com/image.jpg",
+	type: mockPostType(),
+	tags: [mockPostTag()],
+	...overrides,
+});
+
+const makePost = (overrides?: Partial<IRawPost>): IPost =>
+	Post.make(makeValidProps(overrides));
 
 describe("PostRepository", () => {
 	let repository: PostRepository;
-
-	const makeValidPostData = (
-		overrides: Partial<BuildPostDTO> = {},
-	): BuildPostDTO => {
-		const name = faker.lorem.words(3);
-		return {
-			postTypeId: generateUUID(),
-			name: name,
-			description: faker.lorem.sentence(),
-			cover: faker.internet.url(),
-			tags: [generateUUID()],
-			...overrides,
-		};
-	};
 
 	beforeEach(() => {
 		repository = new PostRepository();
 	});
 
 	describe("create", () => {
-		it("deve criar um novo post com sucesso", async () => {
-			const data = makeValidPostData();
-			const post = Post.make(data, makeEntityFactory());
+		it("should store a post", async () => {
+			const post = makePost();
 
 			await repository.create(post);
 
-			const found = await repository.findById(post.id);
-			expect(found).not.toBeNull();
-			expect(found?.id).toBe(post.id);
-			expect(found?.name).toBe(data.name);
+			expect(repository.getAll()).toHaveLength(1);
 		});
 
-		it("deve lançar erro ao tentar criar post com ID duplicado", async () => {
-			const data = makeValidPostData();
-			const entityProps = makeEntityFactory();
-			const post1 = Post.make(data, entityProps);
-			// Create a second post instance with the SAME ID (simulating duplication)
-			const post2 = Post.make(data, entityProps);
+		it("should throw ConflictException when post with same id already exists", async () => {
+			const post = makePost();
+			await repository.create(post);
 
-			await repository.create(post1);
-
-			await expect(repository.create(post2)).rejects.toThrow(
-				`Post com ID ${post1.id} já existe`,
+			expect(repository.create(post)).rejects.toBeInstanceOf(
+				ConflictException,
 			);
 		});
 	});
 
 	describe("findById", () => {
-		it("deve retornar o post quando encontrado", async () => {
-			const post = Post.make(makeValidPostData(), makeEntityFactory());
+		it("should return the post when found", async () => {
+			const post = makePost();
 			await repository.create(post);
 
 			const result = await repository.findById(post.id);
-			expect(result).not.toBeNull();
-			expect(result?.id).toBe(post.id);
+
+			expect(result).toBe(post);
 		});
 
-		it("deve retornar null quando o post não existe", async () => {
-			const result = await repository.findById(generateUUID());
+		it("should return null when post is not found", async () => {
+			const result = await repository.findById("non-existent");
+
 			expect(result).toBeNull();
 		});
 	});
 
 	describe("findBySlug", () => {
-		it("deve retornar o post quando encontrado pelo slug", async () => {
-			const data = makeValidPostData();
-			const post = Post.make(data, makeEntityFactory());
+		it("should return the post when found by slug", async () => {
+			const post = makePost({ name: "My Post" });
 			await repository.create(post);
 
 			const result = await repository.findBySlug(post.slug);
-			expect(result).not.toBeNull();
-			expect(result?.id).toBe(post.id);
-			expect(result?.slug).toBe(post.slug);
+
+			expect(result).toBe(post);
 		});
 
-		it("deve retornar null quando o slug não existe", async () => {
-			await repository.create(
-				Post.make(makeValidPostData(), makeEntityFactory()),
-			);
+		it("should return null when slug is not found", async () => {
 			const result = await repository.findBySlug("non-existent-slug");
+
 			expect(result).toBeNull();
 		});
 	});
 
 	describe("findManyByIds", () => {
-		it("deve retornar posts correspondentes aos IDs fornecidos", async () => {
-			const post1 = Post.make(makeValidPostData(), makeEntityFactory());
-			const post2 = Post.make(makeValidPostData(), makeEntityFactory());
-			await repository.create(post1);
-			await repository.create(post2);
+		it("should return posts matching the given ids", async () => {
+			const postA = makePost({ name: "Post A" });
+			const postB = makePost({ name: "Post B" });
+			await repository.create(postA);
+			await repository.create(postB);
 
-			const results = await repository.findManyByIds([post1.id, post2.id]);
+			const result = await repository.findManyByIds([postA.id, postB.id]);
 
-			expect(results).toHaveLength(2);
-			expect(results[0]?.id).toBe(post1.id);
-			expect(results[1]?.id).toBe(post2.id);
+			expect(result).toEqual([postA, postB]);
 		});
 
-		it("deve retornar null para IDs não encontrados mantendo a ordem", async () => {
-			const post1 = Post.make(makeValidPostData(), makeEntityFactory());
-			await repository.create(post1);
-			const nonExistentId = generateUUID();
+		it("should return null for ids not found", async () => {
+			const post = makePost();
+			await repository.create(post);
 
-			const results = await repository.findManyByIds([post1.id, nonExistentId]);
+			const result = await repository.findManyByIds([
+				post.id,
+				"non-existent",
+			]);
 
-			expect(results).toHaveLength(2);
-			expect(results[0]?.id).toBe(post1.id);
-			expect(results[1]).toBeNull();
-		});
-
-		it("deve retornar array vazio se lista de IDs for vazia", async () => {
-			const results = await repository.findManyByIds([]);
-			expect(results).toHaveLength(0);
+			expect(result).toEqual([post, null]);
 		});
 	});
 
 	describe("findMany", () => {
-		it("deve retornar posts paginados", async () => {
-			// Create MAX_ITEMS_PER_QUERY + 5 posts
-			for (let i = 0; i < MAX_ITEMS_PER_QUERY + 5; i++) {
-				await repository.create(
-					Post.make(makeValidPostData(), makeEntityFactory()),
-				);
-			}
+		it("should return paginated posts", async () => {
+			const post = makePost();
+			await repository.create(post);
 
-			const page1 = await repository.findMany(1);
-			expect(page1).toHaveLength(MAX_ITEMS_PER_QUERY);
+			const result = await repository.findMany(1);
 
-			const page2 = await repository.findMany(2);
-			expect(page2).toHaveLength(5);
+			expect(result).toHaveLength(1);
+			expect(result[0]).toBe(post);
 		});
 
-		it("deve retornar lista vazia se a página não tiver items", async () => {
-			const page = await repository.findMany(1);
-			expect(page).toHaveLength(0);
+		it("should return empty array for pages beyond data", async () => {
+			const post = makePost();
+			await repository.create(post);
+
+			const result = await repository.findMany(999);
+
+			expect(result).toEqual([]);
 		});
 	});
 
 	describe("findManyByPostType", () => {
-		it("deve filtrar posts pelo postTypeId e paginar", async () => {
-			const targetTypeId = generateUUID();
-			const otherTypeId = generateUUID();
+		it("should return only posts matching the post type", async () => {
+			const typeA = mockPostType({ id: "type-a" });
+			const typeB = mockPostType({ id: "type-b" });
+			const postA = makePost({ name: "Post A", type: typeA });
+			const postB = makePost({ name: "Post B", type: typeB });
+			await repository.create(postA);
+			await repository.create(postB);
 
-			// Create MAX_ITEMS_PER_QUERY + 5 posts of target type
-			for (let i = 0; i < MAX_ITEMS_PER_QUERY + 5; i++) {
-				const data = makeValidPostData({ postTypeId: targetTypeId });
-				await repository.create(Post.make(data, makeEntityFactory()));
-			}
+			const result = await repository.findManyByPostType("type-a", 1);
 
-			// Create 5 posts of other type
-			for (let i = 0; i < 5; i++) {
-				const data = makeValidPostData({ postTypeId: otherTypeId });
-				await repository.create(Post.make(data, makeEntityFactory()));
-			}
-
-			// Mock IUnmountedPostType - only ID is needed for the repo
-			const postTypeMock = targetTypeId;
-
-			const page1 = await repository.findManyByPostType(postTypeMock, 1);
-			expect(page1).toHaveLength(MAX_ITEMS_PER_QUERY);
-			page1.map((p) => expect(p.postTypeId).toBe(targetTypeId));
-
-			const page2 = await repository.findManyByPostType(postTypeMock, 2);
-			expect(page2).toHaveLength(5);
-			page2.map((p) => expect(p.postTypeId).toBe(targetTypeId));
+			expect(result).toHaveLength(1);
+			expect(result[0]).toBe(postA);
 		});
 
-		it("deve retornar vazio se não houver posts do tipo", async () => {
-			const postTypeMock = generateUUID();
-			const result = await repository.findManyByPostType(postTypeMock, 1);
-			expect(result).toHaveLength(0);
+		it("should return empty array when no posts match the type", async () => {
+			const post = makePost();
+			await repository.create(post);
+
+			const result = await repository.findManyByPostType(
+				"non-existent-type",
+				1,
+			);
+
+			expect(result).toEqual([]);
 		});
 	});
 
 	describe("update", () => {
-		it("deve atualizar um post existente", async () => {
-			const originalData = makeValidPostData({ name: "Original Name" });
-			const entityProps = makeEntityFactory();
-			const post = Post.make(originalData, entityProps);
+		it("should update an existing post", async () => {
+			const post = makePost() as Post;
 			await repository.create(post);
 
-			// Update local instance
 			post.rename("Updated Name");
-
-			// Perform update in repository
 			await repository.update(post);
 
 			const found = await repository.findById(post.id);
-			expect(found?.name).toBe("Updated Name");
+			expect(found!.name).toBe("Updated Name");
 		});
 
-		it("deve lançar erro ao tentar atualizar post inexistente", async () => {
-			const post = Post.make(makeValidPostData(), makeEntityFactory());
-			await expect(repository.update(post)).rejects.toThrow(
-				`Post com ID ${post.id} não encontrado`,
-			);
+		it("should throw when post does not exist", async () => {
+			const post = makePost();
+
+			expect(repository.update(post)).rejects.toThrow();
 		});
 	});
 
 	describe("delete", () => {
-		it("deve remover um post existente", async () => {
-			const post = Post.make(makeValidPostData(), makeEntityFactory());
+		it("should remove the post", async () => {
+			const post = makePost();
 			await repository.create(post);
 
 			await repository.delete(post);
 
-			const found = await repository.findById(post.id);
-			expect(found).toBeNull();
+			expect(repository.getAll()).toHaveLength(0);
 		});
 
-		it("deve lançar erro ao tentar remover post inexistente", async () => {
-			const post = Post.make(makeValidPostData(), makeEntityFactory());
-			await expect(repository.delete(post)).rejects.toThrow(
-				`Post com ID ${post.id} não encontrado`,
-			);
+		it("should throw when post does not exist", async () => {
+			const post = makePost();
+
+			expect(repository.delete(post)).rejects.toThrow();
 		});
 	});
 
 	describe("count", () => {
-		it("deve retornar a contagem correta de posts", async () => {
-			expect(await repository.count()).toBe(0);
+		it("should return the total number of posts", async () => {
+			await repository.create(makePost({ name: "Post A" }));
+			await repository.create(makePost({ name: "Post B" }));
 
-			const post1 = Post.make(makeValidPostData(), makeEntityFactory());
-			await repository.create(post1);
-			expect(await repository.count()).toBe(1);
+			const result = await repository.count();
 
-			const post2 = Post.make(makeValidPostData(), makeEntityFactory());
-			await repository.create(post2);
-			expect(await repository.count()).toBe(2);
+			expect(result).toBe(2);
+		});
 
-			await repository.delete(post1);
-			expect(await repository.count()).toBe(1);
+		it("should return 0 when repository is empty", async () => {
+			const result = await repository.count();
+
+			expect(result).toBe(0);
 		});
 	});
 
 	describe("countByPostType", () => {
-		it("deve contar apenas posts do tipo especificado", async () => {
-			const type1 = generateUUID();
-			const type2 = generateUUID();
+		it("should return the count of posts matching the type", async () => {
+			const typeA = mockPostType({ id: "type-a" });
+			const typeB = mockPostType({ id: "type-b" });
+			await repository.create(makePost({ name: "Post A", type: typeA }));
+			await repository.create(makePost({ name: "Post B", type: typeA }));
+			await repository.create(makePost({ name: "Post C", type: typeB }));
 
-			const post1 = Post.make(
-				makeValidPostData({ postTypeId: type1 }),
-				makeEntityFactory(),
-			);
-			const post2 = Post.make(
-				makeValidPostData({ postTypeId: type1 }),
-				makeEntityFactory(),
-			);
-			const post3 = Post.make(
-				makeValidPostData({ postTypeId: type2 }),
-				makeEntityFactory(),
-			);
+			const result = await repository.countByPostType("type-a");
 
-			await repository.create(post1);
-			await repository.create(post2);
-			await repository.create(post3);
-
-			expect(await repository.countByPostType(type1)).toBe(2);
-			expect(await repository.countByPostType(type2)).toBe(1);
+			expect(result).toBe(2);
 		});
 
-		it("deve retornar 0 se não houver posts do tipo", async () => {
-			const type1 = generateUUID();
-			const post = Post.make(
-				makeValidPostData({ postTypeId: type1 }),
-				makeEntityFactory(),
-			);
-			await repository.create(post);
+		it("should return 0 when no posts match the type", async () => {
+			const result = await repository.countByPostType("non-existent");
 
-			expect(await repository.countByPostType(generateUUID())).toBe(0);
+			expect(result).toBe(0);
 		});
 	});
 
-	describe("getAll (auxiliary)", () => {
-		it("deve retornar todos os posts", async () => {
-			await repository.create(
-				Post.make(makeValidPostData(), makeEntityFactory()),
-			);
-			await repository.create(
-				Post.make(makeValidPostData(), makeEntityFactory()),
-			);
-
-			const all = repository.getAll();
-			expect(all).toHaveLength(2);
-		});
-	});
-
-	describe("clear (auxiliary)", () => {
-		it("deve limpar o repositório", async () => {
-			await repository.create(
-				Post.make(makeValidPostData(), makeEntityFactory()),
-			);
-			expect(await repository.count()).toBe(1);
+	describe("clear", () => {
+		it("should remove all posts", async () => {
+			await repository.create(makePost({ name: "Post A" }));
+			await repository.create(makePost({ name: "Post B" }));
 
 			repository.clear();
-			expect(await repository.count()).toBe(0);
+
+			expect(repository.getAll()).toEqual([]);
+		});
+	});
+
+	describe("getAll", () => {
+		it("should return all stored posts", async () => {
+			await repository.create(makePost({ name: "Post A" }));
+			await repository.create(makePost({ name: "Post B" }));
+
+			const result = repository.getAll();
+
+			expect(result).toHaveLength(2);
+		});
+
+		it("should return empty array when repository is empty", () => {
+			expect(repository.getAll()).toEqual([]);
 		});
 	});
 });

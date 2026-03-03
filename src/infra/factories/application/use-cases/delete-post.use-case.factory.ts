@@ -1,6 +1,9 @@
 import { DeletePostUseCase } from "@/application/use-cases/delete-post.use-case";
-import { makePostRepository } from "../../repositories/post.repository.factory";
+import type { IPostRepository } from "@/domain/types/repositories";
+import { makeFindPostUseCase } from "./find-post.use-case.factory";
 
-export function makeDeletePostUseCase(): DeletePostUseCase {
-	return new DeletePostUseCase(makePostRepository());
+export function makeDeletePostUseCase(
+    postRepository: IPostRepository,
+): DeletePostUseCase {
+    return new DeletePostUseCase(postRepository, makeFindPostUseCase(postRepository));
 }

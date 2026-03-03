@@ -1,23 +1,28 @@
 import { CreatePostUseCase } from "@/application/use-cases/create-post.use-case";
-import { makePostRepository } from "../../repositories/post.repository.factory";
-import { PostUniquenessChecker } from "@/domain/services/post-uniqueness-checker.service";
-import { PopulatePostService } from "@/application/services/populate-post.service";
-import { FindPostTagsService } from "@/application/services/find-many-post-tags.service";
-import { makePostTagRepository } from "../../repositories/post-tag.repository.factory";
-import { FindPostTypeService } from "@/application/services/find-post-type.service";
-import { makePostTypeRepository } from "../../repositories/post-type.repository.factory";
+import type {
+    IPostRepository,
+    IPostTagRepository,
+    IPostTypeRepository,
+} from "@/domain/types/repositories";
+import { makeSlugUniquenessCheckerService } from "../../domain/services";
+import {
+    makeFindManyPostTagsService,
+    makeFindPostTypeService,
+} from "../services";
 
-export function makeCreatePostUseCase(): CreatePostUseCase {
-    const postRepository = makePostRepository();
-    const postTagRepository = makePostTagRepository();
-    const postTypeRepository = makePostTypeRepository();
+export function makeCreatePostUseCase(
+    postRepository: IPostRepository,
+    postTagRepository: IPostTagRepository,
+    postTypeRepository: IPostTypeRepository,
+): CreatePostUseCase {
+    const uniquenessChecker = makeSlugUniquenessCheckerService(postRepository);
+    const findPostType = makeFindPostTypeService(postTypeRepository);
+    const findManyPostTags = makeFindManyPostTagsService(postTagRepository);
 
     return new CreatePostUseCase(
         postRepository,
-        new PostUniquenessChecker(postRepository),
-        new PopulatePostService(
-            new FindPostTagsService(postTagRepository),
-            new FindPostTypeService(postTypeRepository),
-        ),
+        uniquenessChecker,
+        findPostType,
+        findManyPostTags,
     );
 }

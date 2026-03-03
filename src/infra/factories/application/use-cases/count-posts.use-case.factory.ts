@@ -1,6 +1,6 @@
 import { CountPostsUseCase } from "@/application/use-cases/count-posts.use-case";
-import { makePostRepository } from "../../repositories/post.repository.factory";
+import type { IPostReader } from "@/domain/types/repositories";
 
-export function makeCountPostsUseCase(): CountPostsUseCase {
-	return new CountPostsUseCase(makePostRepository());
+export function makeCountPostsUseCase(reader: IPostReader): CountPostsUseCase {
+    return new CountPostsUseCase(reader);
 }

@@ -1,4 +1,4 @@
-import type { IPost } from "./types";
+import type { IConstructorPost, IPost } from "./types";
 import { Entity } from "@caffeine/entity";
 import { UnpackedPostSchema } from "./schemas";
 import type { IPostTag } from "@caffeine-packages/post.post-tag/domain/types";
@@ -29,7 +29,7 @@ export class Post extends Entity<UnpackedPostSchema> implements IPost {
     private _tags: IPostTag[];
 
     private constructor(
-        { cover, description, tags, type, name, slug }: IRawPost,
+        { cover, description, tags, type, name, slug }: IConstructorPost,
         entityProps: EntityDTO,
     ) {
         super(entityProps);

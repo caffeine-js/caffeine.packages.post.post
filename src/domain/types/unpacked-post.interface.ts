@@ -1,10 +1,4 @@
-import type { IEntity } from "@caffeine/models/types";
+import type { IRawEntity } from "@caffeine/entity/types";
+import type { IRawPost } from "./raw-post.interface";
 
-export interface IUnpackedPost extends IEntity {
-	postTypeId: string;
-	name: string;
-	slug: string;
-	description: string;
-	cover: string;
-	tags: string[];
-}
+export interface IUnpackedPost extends IRawPost, IRawEntity {}

@@ -1,24 +1,28 @@
 import type { IPostTagRepository } from "@/domain/types/repositories/post-tag-repository.interface";
-import type { IUnmountedPostTag } from "@caffeine-packages/post.post-tag/domain/types";
-import type { PostTagRoutes } from "@caffeine-packages/post.post-tag/presentation";
+import type { IPostTag } from "@caffeine-packages/post.post-tag/domain/types";
+import type { PostTagRoutes } from "@caffeine-packages/post.post-tag/presentation/routes";
+import { PostTag } from "@caffeine-packages/post.post-tag/domain";
 import { treaty } from "@elysiajs/eden";
 
 export class PostTagRepository implements IPostTagRepository {
-	private readonly postTagService;
+    private readonly postTagService: ReturnType<
+        typeof treaty<PostTagRoutes>
+    >["post-tags"];
 
-	public constructor(baseUrl: string) {
-		this.postTagService = treaty<PostTagRoutes>(baseUrl)["post-tag"];
-	}
+    public constructor(baseUrl: string) {
+        this.postTagService = treaty<PostTagRoutes>(baseUrl)["post-tags"];
+    }
 
-	async findById(id: string): Promise<IUnmountedPostTag | null> {
-		const targetPostTagRequest = await this.postTagService({
-			id,
-		}).get();
+    async find(idOrSlug: string): Promise<IPostTag | null> {
+        const { data, status, error } = await this.postTagService({
+            "id-or-slug": idOrSlug,
+        }).get();
 
-		if (targetPostTagRequest.error) throw targetPostTagRequest.error.value;
+        if (error) throw error.value;
+        if (status !== 200) return null;
 
-		if (targetPostTagRequest.status !== 200) return null;
+        const { name, slug, hidden, ...entityProps } = data!;
 
-		return targetPostTagRequest.data;
-	}
+        return PostTag.make({ name, slug, hidden }, entityProps);
+    }
 }

@@ -1,191 +1,129 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { faker } from "@faker-js/faker";
+import { describe, expect, it, beforeEach } from "bun:test";
 import { PostTagRepository } from "./post-tag.repository";
-import type { IUnmountedPostTag } from "@caffeine-packages/post.post-tag/domain/types";
-import { generateUUID } from "@caffeine/entity/helpers";
-import { makeEntityFactory } from "@caffeine/entity/factories";
+import type { IPostTag } from "@caffeine-packages/post.post-tag/domain/types";
+
+const mockPostTag = (overrides?: Partial<IPostTag>): IPostTag =>
+    ({
+        id: "tag-id",
+        name: "Tech",
+        slug: "tech",
+        hidden: false,
+        createdAt: new Date().toISOString(),
+        rename() {},
+        reslug() {},
+        changeVisibility() {},
+        ...overrides,
+    }) as IPostTag;
 
 describe("PostTagRepository", () => {
-	let repository: PostTagRepository;
+    let repository: PostTagRepository;
 
-	/**
-	 * Factory para criar dados válidos de PostTag
-	 */
-	const makeValidPostTagData = (
-		overrides: Partial<IUnmountedPostTag> = {},
-	): IUnmountedPostTag => ({
-		...makeEntityFactory(),
-		name: faker.lorem.word(),
-		slug: faker.helpers.slugify(faker.lorem.words(2)),
-		hidden: true,
-		...overrides,
-	});
+    beforeEach(() => {
+        repository = new PostTagRepository();
+    });
 
-	/**
-	 * Reinicia o repositório antes de cada teste
-	 */
-	beforeEach(() => {
-		repository = new PostTagRepository();
-	});
+    describe("find", () => {
+        it("should find a tag by id", async () => {
+            const tag = mockPostTag({ id: "tag-1" });
+            repository.seed([tag]);
 
-	describe("findById()", () => {
-		it("deve encontrar uma tag por ID", async () => {
-			// Arrange
-			const tag = makeValidPostTagData();
-			repository.seed([tag]);
+            const result = await repository.find("tag-1");
 
-			// Act
-			const found = await repository.findById(tag.id);
+            expect(result).toBe(tag);
+        });
 
-			// Assert
-			expect(found).not.toBeNull();
-			expect(found?.id).toBe(tag.id);
-		});
+        it("should find a tag by slug", async () => {
+            const tag = mockPostTag({ id: "tag-1", slug: "tech" });
+            repository.seed([tag]);
 
-		it("deve retornar null quando tag não existe", async () => {
-			// Arrange
-			const nonExistentId = generateUUID();
+            const result = await repository.find("tech");
 
-			// Act
-			const found = await repository.findById(nonExistentId);
+            expect(result).toBe(tag);
+        });
 
-			// Assert
-			expect(found).toBeNull();
-		});
+        it("should prioritize id over slug", async () => {
+            const tagA = mockPostTag({ id: "tech", slug: "slug-a" });
+            const tagB = mockPostTag({ id: "tag-b", slug: "tech" });
+            repository.seed([tagA, tagB]);
 
-		it("deve retornar a tag com todas as propriedades", async () => {
-			// Arrange
-			const tag = makeValidPostTagData();
-			repository.seed([tag]);
+            const result = await repository.find("tech");
 
-			// Act
-			const found = await repository.findById(tag.id);
+            expect(result).toBe(tagA);
+        });
 
-			// Assert
-			expect(found).toMatchObject({
-				id: tag.id,
-				name: tag.name,
-				slug: tag.slug,
-				createdAt: tag.createdAt,
-				updatedAt: tag.updatedAt,
-			});
-		});
-	});
+        it("should return null when tag is not found", async () => {
+            const result = await repository.find("non-existent");
 
-	describe("seed()", () => {
-		it("deve popular o repositório com múltiplas tags", () => {
-			// Arrange
-			const tags = [
-				makeValidPostTagData(),
-				makeValidPostTagData(),
-				makeValidPostTagData(),
-			];
+            expect(result).toBeNull();
+        });
+    });
 
-			// Act
-			repository.seed(tags);
+    describe("seed", () => {
+        it("should populate the repository with tags", () => {
+            const tags = [
+                mockPostTag({ id: "tag-1" }),
+                mockPostTag({ id: "tag-2" }),
+            ];
 
-			// Assert
-			expect(repository.count()).toBe(3);
-		});
+            repository.seed(tags);
 
-		it("deve sobrescrever tag existente com mesmo ID", () => {
-			// Arrange
-			const id = generateUUID();
-			const tag1 = makeValidPostTagData({ id, name: "Original" });
-			const tag2 = makeValidPostTagData({ id, name: "Atualizada" });
+            expect(repository.count()).toBe(2);
+        });
 
-			// Act
-			repository.seed([tag1]);
-			repository.seed([tag2]);
+        it("should overwrite existing tags with the same id", () => {
+            const original = mockPostTag({ id: "tag-1", name: "Original" });
+            const updated = mockPostTag({ id: "tag-1", name: "Updated" });
 
-			// Assert
-			const found = repository.getAll();
-			expect(found).toHaveLength(1);
-			expect(found[0]?.name).toBe("Atualizada");
-		});
-	});
+            repository.seed([original]);
+            repository.seed([updated]);
 
-	describe("clear()", () => {
-		it("deve limpar todas as tags do repositório", () => {
-			// Arrange
-			const tags = [makeValidPostTagData(), makeValidPostTagData()];
-			repository.seed(tags);
+            expect(repository.count()).toBe(1);
+            expect(repository.getAll()[0]!.name).toBe("Updated");
+        });
+    });
 
-			// Act
-			repository.clear();
+    describe("clear", () => {
+        it("should remove all tags", () => {
+            repository.seed([mockPostTag({ id: "tag-1" })]);
 
-			// Assert
-			expect(repository.count()).toBe(0);
-		});
-	});
+            repository.clear();
 
-	describe("getAll()", () => {
-		it("deve retornar todas as tags", () => {
-			// Arrange
-			const tags = [
-				makeValidPostTagData(),
-				makeValidPostTagData(),
-				makeValidPostTagData(),
-			];
-			repository.seed(tags);
+            expect(repository.count()).toBe(0);
+            expect(repository.getAll()).toEqual([]);
+        });
+    });
 
-			// Act
-			const allTags = repository.getAll();
+    describe("getAll", () => {
+        it("should return all stored tags", () => {
+            const tags = [
+                mockPostTag({ id: "tag-1" }),
+                mockPostTag({ id: "tag-2" }),
+                mockPostTag({ id: "tag-3" }),
+            ];
+            repository.seed(tags);
 
-			// Assert
-			expect(allTags).toHaveLength(3);
-		});
+            const result = repository.getAll();
 
-		it("deve retornar array vazio quando repositório está vazio", () => {
-			// Act
-			const allTags = repository.getAll();
+            expect(result).toHaveLength(3);
+        });
 
-			// Assert
-			expect(allTags).toEqual([]);
-		});
-	});
+        it("should return empty array when repository is empty", () => {
+            expect(repository.getAll()).toEqual([]);
+        });
+    });
 
-	describe("length()", () => {
-		it("deve retornar 0 para repositório vazio", () => {
-			// Act
-			const length = repository.count();
+    describe("count", () => {
+        it("should return the number of stored tags", () => {
+            repository.seed([
+                mockPostTag({ id: "tag-1" }),
+                mockPostTag({ id: "tag-2" }),
+            ]);
 
-			// Assert
-			expect(length).toBe(0);
-		});
+            expect(repository.count()).toBe(2);
+        });
 
-		it("deve retornar a quantidade correta de tags", () => {
-			// Arrange
-			const tags = [
-				makeValidPostTagData(),
-				makeValidPostTagData(),
-				makeValidPostTagData(),
-			];
-			repository.seed(tags);
-
-			// Act
-			const length = repository.count();
-
-			// Assert
-			expect(length).toBe(3);
-		});
-
-		it("deve refletir mudanças após operações", () => {
-			// Arrange
-			const tag1 = makeValidPostTagData();
-			const tag2 = makeValidPostTagData();
-
-			// Act & Assert
-			expect(repository.count()).toBe(0);
-
-			repository.seed([tag1]);
-			expect(repository.count()).toBe(1);
-
-			repository.seed([tag2]);
-			expect(repository.count()).toBe(2);
-
-			repository.clear();
-			expect(repository.count()).toBe(0);
-		});
-	});
+        it("should return 0 when repository is empty", () => {
+            expect(repository.count()).toBe(0);
+        });
+    });
 });

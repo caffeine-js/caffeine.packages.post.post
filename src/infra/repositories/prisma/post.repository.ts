@@ -1,120 +1,170 @@
 import type { IPost } from "@/domain/types";
 import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
-import { prisma } from "@caffeine-packages/post.db.prisma-drive";
 import { MAX_ITEMS_PER_QUERY } from "@caffeine/constants";
-import { UnpackPost } from "@/domain/services";
 import { PrismaPostMapper } from "./prisma-post.mapper";
-import { SafePrisma } from "@caffeine-packages/post.db.prisma-drive/decorators";
+import { SafePrisma } from "@caffeine-adapters/post/decorators";
+import type { PrismaClient } from "@caffeine-adapters/post";
+import { EntitySource } from "@caffeine/entity/symbols";
+import { Post } from "@/domain";
 
 const DEFAULT_POST_SELECT = {
-	tags: { select: { id: true } },
-	id: true,
-	createdAt: true,
-	updatedAt: true,
-	cover: true,
-	name: true,
-	slug: true,
-	description: true,
-	postTypeId: true,
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+    name: true,
+    slug: true,
+    description: true,
+    cover: true,
+    postType: {
+        select: {
+            id: true,
+            createdAt: true,
+            updatedAt: true,
+            isHighlighted: true,
+            name: true,
+            slug: true,
+            schema: true,
+        },
+    },
+    tags: {
+        select: {
+            id: true,
+            createdAt: true,
+            updatedAt: true,
+            name: true,
+            slug: true,
+            hidden: true,
+        },
+    },
 } as const;
 
 export class PostRepository implements IPostRepository {
-	@SafePrisma("post@post")
-	async create(post: IPost): Promise<void> {
-		const { tags: _tags, ...properties } = UnpackPost.run(post);
-		const tags: { connect: Array<{ id: string }> } = {
-			connect: _tags.map((tag) => ({ id: tag })),
-		};
+    public constructor(private readonly prisma: PrismaClient) {}
 
-		await prisma.post.create({
-			data: { ...properties, tags },
-		});
-	}
+    @SafePrisma(Post[EntitySource])
+    async create(post: IPost): Promise<void> {
+        const {
+            tags: _tags,
+            type,
+            cover,
+            createdAt,
+            description,
+            id,
+            name,
+            slug,
+            updatedAt,
+        } = post;
 
-	@SafePrisma("post@post")
-	async findById(id: string): Promise<IPost | null> {
-		const targetPost = await prisma.post.findUnique({
-			where: { id },
-			select: DEFAULT_POST_SELECT,
-		});
+        const tags: { connect: Array<{ id: string }> } = {
+            connect: _tags.map((tag) => ({ id: tag.id })),
+        };
+        const postTypeId = type.id;
 
-		if (!targetPost) return null;
+        await this.prisma.post.create({
+            data: {
+                cover,
+                createdAt,
+                description,
+                id,
+                name,
+                slug,
+                updatedAt,
+                postTypeId,
+                tags,
+            },
+        });
+    }
 
-		return PrismaPostMapper.run(targetPost);
-	}
+    @SafePrisma(Post[EntitySource])
+    async findById(id: string): Promise<IPost | null> {
+        const targetPost = await this.prisma.post.findUnique({
+            where: { id },
+            select: DEFAULT_POST_SELECT,
+        });
 
-	@SafePrisma("post@post")
-	async findBySlug(slug: string): Promise<IPost | null> {
-		const targetPost = await prisma.post.findUnique({
-			where: { slug },
-			select: DEFAULT_POST_SELECT,
-		});
+        if (!targetPost) return null;
 
-		if (!targetPost) return null;
+        return PrismaPostMapper.run(targetPost);
+    }
 
-		return PrismaPostMapper.run(targetPost);
-	}
+    @SafePrisma(Post[EntitySource])
+    async findBySlug(slug: string): Promise<IPost | null> {
+        const targetPost = await this.prisma.post.findUnique({
+            where: { slug },
+            select: DEFAULT_POST_SELECT,
+        });
 
-	@SafePrisma("post@post")
-	async findMany(page: number): Promise<IPost[]> {
-		return (
-			await prisma.post.findMany({
-				skip: MAX_ITEMS_PER_QUERY * (page - 1),
-				take: MAX_ITEMS_PER_QUERY,
-				select: DEFAULT_POST_SELECT,
-			})
-		).map((item) => PrismaPostMapper.run(item));
-	}
+        if (!targetPost) return null;
 
-	@SafePrisma("post@post")
-	async findManyByIds(ids: string[]): Promise<Array<IPost | null>> {
-		const posts = await prisma.post.findMany({
-			where: { id: { in: ids } },
-			select: DEFAULT_POST_SELECT,
-		});
+        return PrismaPostMapper.run(targetPost);
+    }
 
-		const postsMap = new Map(posts.map((post) => [post.id, post]));
+    @SafePrisma(Post[EntitySource])
+    async findMany(page: number): Promise<IPost[]> {
+        return (
+            await this.prisma.post.findMany({
+                skip: MAX_ITEMS_PER_QUERY * (page - 1),
+                take: MAX_ITEMS_PER_QUERY,
+                select: DEFAULT_POST_SELECT,
+            })
+        ).map((item) => PrismaPostMapper.run(item));
+    }
 
-		return ids.map((id) => {
-			const post = postsMap.get(id);
-			return post ? PrismaPostMapper.run(post) : null;
-		});
-	}
+    @SafePrisma(Post[EntitySource])
+    async findManyByIds(ids: string[]): Promise<Array<IPost | null>> {
+        const posts = await this.prisma.post.findMany({
+            where: { id: { in: ids } },
+            select: DEFAULT_POST_SELECT,
+        });
 
-	@SafePrisma("post@post")
-	async findManyByPostType(postTypeId: string, page: number): Promise<IPost[]> {
-		return (
-			await prisma.post.findMany({
-				skip: MAX_ITEMS_PER_QUERY * (page - 1),
-				take: MAX_ITEMS_PER_QUERY,
-				select: DEFAULT_POST_SELECT,
-				where: { postTypeId },
-			})
-		).map((item) => PrismaPostMapper.run(item));
-	}
+        const postsMap = new Map(posts.map((post) => [post.id, post]));
 
-	@SafePrisma("post@post")
-	async update(post: IPost): Promise<void> {
-		const { tags: _tags, ...properties } = UnpackPost.run(post);
+        return ids.map((id) => {
+            const post = postsMap.get(id);
+            return post ? PrismaPostMapper.run(post) : null;
+        });
+    }
 
-		await prisma.post.update({
-			where: { id: post.id },
-			data: { ...properties, tags: { set: _tags.map((id) => ({ id })) } },
-		});
-	}
+    @SafePrisma(Post[EntitySource])
+    async findManyByPostType(
+        postTypeId: string,
+        page: number,
+    ): Promise<IPost[]> {
+        return (
+            await this.prisma.post.findMany({
+                skip: MAX_ITEMS_PER_QUERY * (page - 1),
+                take: MAX_ITEMS_PER_QUERY,
+                select: DEFAULT_POST_SELECT,
+                where: { postTypeId },
+            })
+        ).map((item) => PrismaPostMapper.run(item));
+    }
 
-	@SafePrisma("post@post")
-	async delete(post: IPost): Promise<void> {
-		await prisma.post.delete({ where: { id: post.id } });
-	}
+    @SafePrisma(Post[EntitySource])
+    async update(post: IPost): Promise<void> {
+        const { tags: _tags, ...properties } = post;
 
-	@SafePrisma("post@post")
-	async count(): Promise<number> {
-		return prisma.post.count();
-	}
+        await this.prisma.post.update({
+            where: { id: post.id },
+            data: {
+                ...properties,
+                tags: { set: _tags.map((tag) => ({ id: tag.id })) },
+            },
+        });
+    }
 
-	@SafePrisma("post@post")
-	countByPostType(postTypeId: string): Promise<number> {
-		return prisma.post.count({ where: { postTypeId } });
-	}
+    @SafePrisma(Post[EntitySource])
+    async delete(post: IPost): Promise<void> {
+        await this.prisma.post.delete({ where: { id: post.id } });
+    }
+
+    @SafePrisma(Post[EntitySource])
+    async count(): Promise<number> {
+        return this.prisma.post.count();
+    }
+
+    @SafePrisma(Post[EntitySource])
+    countByPostType(postTypeId: string): Promise<number> {
+        return this.prisma.post.count({ where: { postTypeId } });
+    }
 }

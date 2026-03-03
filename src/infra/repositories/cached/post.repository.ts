@@ -1,222 +1,249 @@
-import { UnpackPost } from "@/domain/services";
 import type { IPost } from "@/domain/types";
 import type { IPostRepository } from "@/domain/types/repositories/post-repository.interface";
-import { redis } from "@caffeine/redis-drive";
 import { CachedPostMapper } from "./cached-post.mapper";
 import { CACHE_EXPIRATION_TIME } from "@caffeine/constants";
+import type { CaffeineCacheInstance } from "@caffeine/cache";
+import { SafeCache } from "@caffeine/cache/decorators";
+import { Mapper } from "@caffeine/entity";
+import { Post } from "@/domain";
+import { EntitySource } from "@caffeine/entity/symbols";
 
 export class PostRepository implements IPostRepository {
-	private postCacheExpirationTime: number = CACHE_EXPIRATION_TIME.SAFE;
+    private postCacheExpirationTime: number = CACHE_EXPIRATION_TIME.SAFE;
 
-	constructor(private readonly repository: IPostRepository) {}
+    constructor(
+        private readonly repository: IPostRepository,
+        private readonly cache: CaffeineCacheInstance,
+    ) {}
 
-	async create(post: IPost): Promise<void> {
-		await this.repository.create(post);
+    @SafeCache(Post[EntitySource])
+    async create(post: IPost): Promise<void> {
+        await this.repository.create(post);
 
-		await this.invalidateListCache();
-	}
+        await this.invalidateListCache();
+    }
 
-	async findById(id: string): Promise<IPost | null> {
-		const storedPost = await redis.get(`post@post::$${id}`);
+    async findById(id: string): Promise<IPost | null> {
+        const storedPost = await this.cache.get(
+            `${Post[EntitySource]}::$${id}`,
+        );
 
-		if (storedPost)
-			return storedPost === null
-				? null
-				: CachedPostMapper.run(`post@post::$${id}`, storedPost);
+        if (storedPost)
+            return CachedPostMapper.run(
+                `${Post[EntitySource]}::$${id}`,
+                storedPost,
+            );
 
-		const targetPost = await this.repository.findById(id);
+        const targetPost = await this.repository.findById(id);
 
-		if (!targetPost) return null;
+        if (!targetPost) return null;
 
-		await this.cachePost(targetPost);
+        await this.cachePost(targetPost);
 
-		return targetPost;
-	}
+        return targetPost;
+    }
 
-	async findBySlug(slug: string): Promise<IPost | null> {
-		const storedId = await redis.get(`post@post::${slug}`);
+    async findBySlug(slug: string): Promise<IPost | null> {
+        const storedId = await this.cache.get(`${Post[EntitySource]}::${slug}`);
 
-		if (storedId) {
-			const post = await this.findById(storedId);
+        if (storedId) {
+            const post = await this.findById(storedId);
 
-			if (post && post.slug === slug) return post;
-		}
+            if (post && post.slug === slug) return post;
+        }
 
-		const targetPost = await this.repository.findBySlug(slug);
+        const targetPost = await this.repository.findBySlug(slug);
 
-		if (!targetPost) return null;
+        if (!targetPost) return null;
 
-		await this.cachePost(targetPost);
+        await this.cachePost(targetPost);
 
-		return targetPost;
-	}
+        return targetPost;
+    }
 
-	async findMany(page: number): Promise<IPost[]> {
-		const key = `post@post:page::${page}`;
-		const storedIds = await redis.get(key);
+    async findMany(page: number): Promise<IPost[]> {
+        const key = `${Post[EntitySource]}:page::${page}`;
+        const storedIds = await this.cache.get(key);
 
-		if (storedIds) {
-			const ids: string[] = JSON.parse(storedIds);
-			return (await this.findManyByIds(ids)).filter(
-				(post): post is IPost => post !== null,
-			);
-		}
+        if (storedIds) {
+            const ids: string[] = JSON.parse(storedIds);
+            const posts = await this.findManyByIds(ids);
 
-		const targetPosts = await this.repository.findMany(page);
+            if (posts.every((post): post is IPost => post !== null))
+                return posts;
 
-		await Promise.all(targetPosts.map((post) => this.cachePost(post)));
+            await this.cache.del(key);
+        }
 
-		await redis.set(
-			key,
-			JSON.stringify(targetPosts.map((post) => post.id)),
-			"EX",
-			this.postCacheExpirationTime,
-		);
+        const targetPosts = await this.repository.findMany(page);
 
-		return targetPosts;
-	}
+        await Promise.all(targetPosts.map((post) => this.cachePost(post)));
 
-	async findManyByIds(ids: string[]): Promise<Array<IPost | null>> {
-		if (ids.length === 0) return [];
+        await this.cache.set(
+            key,
+            JSON.stringify(targetPosts.map((post) => post.id)),
+            "EX",
+            this.postCacheExpirationTime,
+        );
 
-		const keys = ids.map((id) => `post@post::$${id}`);
-		const cachedValues = await redis.mget(...keys);
+        return targetPosts;
+    }
 
-		const postsMap = new Map<string, IPost>();
-		const missedIds: string[] = [];
+    async findManyByIds(ids: string[]): Promise<Array<IPost | null>> {
+        if (ids.length === 0) return [];
 
-		for (let i = 0; i < ids.length; i++) {
-			const id = ids[i];
-			if (!id) continue;
+        const keys = ids.map((id) => `${Post[EntitySource]}::$${id}`);
+        const cachedValues = await this.cache.mget(...keys);
 
-			const cached = cachedValues[i];
+        const postsMap = new Map<string, IPost>();
+        const missedIds: string[] = [];
 
-			if (cached) {
-				try {
-					const post = CachedPostMapper.run(`post@post::$${id}`, cached);
-					postsMap.set(id, post);
-				} catch {
-					missedIds.push(id);
-				}
-			} else {
-				missedIds.push(id);
-			}
-		}
+        for (let i = 0; i < ids.length; i++) {
+            const id = ids[i];
+            if (!id) continue;
 
-		if (missedIds.length > 0) {
-			const fetchedPosts = await this.repository.findManyByIds(missedIds);
+            const cached = cachedValues[i];
 
-			for (const post of fetchedPosts) {
-				if (post) {
-					await this.cachePost(post);
-					postsMap.set(post.id, post);
-				}
-			}
-		}
+            if (cached) {
+                try {
+                    const post = CachedPostMapper.run(
+                        `${Post[EntitySource]}::$${id}`,
+                        cached,
+                    );
+                    postsMap.set(id, post);
+                } catch {
+                    missedIds.push(id);
+                }
+            } else {
+                missedIds.push(id);
+            }
+        }
 
-		return ids.map((id) => postsMap.get(id) ?? null);
-	}
+        if (missedIds.length > 0) {
+            const fetchedPosts = await this.repository.findManyByIds(missedIds);
 
-	async findManyByPostType(postTypeId: string, page: number): Promise<IPost[]> {
-		const key = `post@post:type::$${postTypeId}:page::${page}`;
-		const storedIds = await redis.get(key);
+            for (const post of fetchedPosts) {
+                if (post) {
+                    await this.cachePost(post);
+                    postsMap.set(post.id, post);
+                }
+            }
+        }
 
-		if (storedIds) {
-			const ids: string[] = JSON.parse(storedIds);
-			return (await this.findManyByIds(ids)).filter(
-				(post): post is IPost => post !== null,
-			);
-		}
+        return ids.map((id) => postsMap.get(id) ?? null);
+    }
 
-		const targetPosts = await this.repository.findManyByPostType(
-			postTypeId,
-			page,
-		);
+    async findManyByPostType(
+        postTypeId: string,
+        page: number,
+    ): Promise<IPost[]> {
+        const key = `${Post[EntitySource]}:type::$${postTypeId}:page::${page}`;
+        const storedIds = await this.cache.get(key);
 
-		await Promise.all(targetPosts.map((post) => this.cachePost(post)));
+        if (storedIds) {
+            const ids: string[] = JSON.parse(storedIds);
+            const posts = await this.findManyByIds(ids);
 
-		await redis.set(
-			key,
-			JSON.stringify(targetPosts.map((post) => post.id)),
-			"EX",
-			this.postCacheExpirationTime,
-		);
+            if (posts.every((post): post is IPost => post !== null))
+                return posts;
 
-		return targetPosts;
-	}
+            await this.cache.del(key);
+        }
 
-	async update(post: IPost): Promise<void> {
-		const _cachedPost = await redis.get(`post@post::$${post.id}`);
+        const targetPosts = await this.repository.findManyByPostType(
+            postTypeId,
+            page,
+        );
 
-		if (_cachedPost) {
-			const cachedPost: IPost = CachedPostMapper.run(
-				`post@post::$${post.id}`,
-				_cachedPost,
-			);
+        await Promise.all(targetPosts.map((post) => this.cachePost(post)));
 
-			await redis.del(`post@post::$${cachedPost.id}`);
-			await redis.del(`post@post::${cachedPost.slug}`);
-		}
+        await this.cache.set(
+            key,
+            JSON.stringify(targetPosts.map((post) => post.id)),
+            "EX",
+            this.postCacheExpirationTime,
+        );
 
-		await this.repository.update(post);
+        return targetPosts;
+    }
 
-		await this.cachePost(post);
-		await this.invalidateListCache();
-	}
+    async update(post: IPost): Promise<void> {
+        const _cachedPost = await this.cache.get(
+            `${Post[EntitySource]}::$${post.id}`,
+        );
 
-	async delete(post: IPost): Promise<void> {
-		await redis.del(`post@post::$${post.id}`);
-		await redis.del(`post@post::${post.slug}`);
+        if (_cachedPost) {
+            const cachedPost: IPost = CachedPostMapper.run(
+                `${Post[EntitySource]}::$${post.id}`,
+                _cachedPost,
+            );
 
-		await this.repository.delete(post);
-		await this.invalidateListCache();
-	}
+            await this.cache.del(`${Post[EntitySource]}::$${cachedPost.id}`);
+            await this.cache.del(`${Post[EntitySource]}::${cachedPost.slug}`);
+        }
 
-	count(): Promise<number> {
-		return this.repository.count();
-	}
+        await this.repository.update(post);
 
-	countByPostType(postType: string): Promise<number> {
-		return this.repository.countByPostType(postType);
-	}
+        await this.cachePost(post);
+        await this.invalidateListCache();
+    }
 
-	private async cachePost(_post: IPost): Promise<void> {
-		const post = UnpackPost.run(_post);
+    async delete(post: IPost): Promise<void> {
+        await this.cache.del(`${Post[EntitySource]}::$${post.id}`);
+        await this.cache.del(`${Post[EntitySource]}::${post.slug}`);
 
-		await redis.set(
-			`post@post::$${post.id}`,
-			JSON.stringify(post),
-			"EX",
-			this.postCacheExpirationTime,
-		);
-		await redis.set(
-			`post@post::${post.slug}`,
-			post.id,
-			"EX",
-			this.postCacheExpirationTime,
-		);
-	}
+        await this.repository.delete(post);
+        await this.invalidateListCache();
+    }
 
-	private async invalidateListCache(): Promise<void> {
-		const patterns = ["post@post:page:*", "post@post:type:*"];
+    count(): Promise<number> {
+        return this.repository.count();
+    }
 
-		for (const pattern of patterns) {
-			let cursor = "0";
-			do {
-				const [newCursor, keys] = await redis.scan(
-					cursor,
-					"MATCH",
-					pattern,
-					"COUNT",
-					100,
-				);
+    countByPostType(postTypeId: string): Promise<number> {
+        return this.repository.countByPostType(postTypeId);
+    }
 
-				cursor = newCursor;
+    private async cachePost(_post: IPost): Promise<void> {
+        const post = Mapper.toDTO(_post);
 
-				if (keys.length > 0) {
-					await redis.del(...keys);
-				}
-			} while (cursor !== "0");
-		}
-	}
+        await this.cache.set(
+            `${Post[EntitySource]}::$${post.id}`,
+            JSON.stringify(post),
+            "EX",
+            this.postCacheExpirationTime,
+        );
+        await this.cache.set(
+            `${Post[EntitySource]}::${post.slug}`,
+            post.id,
+            "EX",
+            this.postCacheExpirationTime,
+        );
+    }
+
+    private async invalidateListCache(): Promise<void> {
+        const patterns = [
+            `${Post[EntitySource]}:page:*`,
+            `${Post[EntitySource]}:type:*`,
+        ];
+
+        for (const pattern of patterns) {
+            let cursor = "0";
+            do {
+                const [newCursor, keys] = await this.cache.scan(
+                    cursor,
+                    "MATCH",
+                    pattern,
+                    "COUNT",
+                    100,
+                );
+
+                cursor = newCursor;
+
+                if (keys.length > 0) {
+                    await this.cache.del(...keys);
+                }
+            } while (cursor !== "0");
+        }
+    }
 }

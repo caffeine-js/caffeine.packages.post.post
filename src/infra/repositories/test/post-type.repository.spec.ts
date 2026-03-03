@@ -1,257 +1,129 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { faker } from "@faker-js/faker";
+import { describe, expect, it, beforeEach } from "bun:test";
 import { PostTypeRepository } from "./post-type.repository";
-import type { IUnmountedPostType } from "@caffeine-packages/post.post-type/domain/types";
-import { t } from "@caffeine/models";
-import { generateUUID } from "@caffeine/entity/helpers";
-import { makeEntityFactory } from "@caffeine/entity/factories";
-import { Schema } from "@caffeine/schema";
+import type { IPostType } from "@caffeine-packages/post.post-type/domain/types";
+
+const mockPostType = (overrides?: Partial<IPostType>): IPostType =>
+    ({
+        id: "type-id",
+        name: "Blog",
+        slug: "blog",
+        isHighlighted: true,
+        createdAt: new Date().toISOString(),
+        rename() {},
+        reslug() {},
+        setHighlightTo() {},
+        ...overrides,
+    }) as IPostType;
 
 describe("PostTypeRepository", () => {
-	let repository: PostTypeRepository;
+    let repository: PostTypeRepository;
 
-	/**
-	 * Factory para criar dados válidos de PostType
-	 */
-	const makeValidPostTypeData = (
-		overrides: Partial<IUnmountedPostType> = {},
-	): IUnmountedPostType => ({
-		...makeEntityFactory(),
-		name: faker.lorem.word(),
-		slug: faker.helpers.slugify(faker.lorem.words(2)),
-		schema: Schema.make(t.Object({ name: t.String() })).toString(),
-		isHighlighted: true,
-		...overrides,
-	});
+    beforeEach(() => {
+        repository = new PostTypeRepository();
+    });
 
-	/**
-	 * Reinicia o repositório antes de cada teste
-	 */
-	beforeEach(() => {
-		repository = new PostTypeRepository();
-	});
+    describe("find", () => {
+        it("should find a type by id", async () => {
+            const type = mockPostType({ id: "type-1" });
+            repository.seed([type]);
 
-	describe("findById()", () => {
-		it("deve encontrar um tipo por ID", async () => {
-			// Arrange
-			const type = makeValidPostTypeData();
-			repository.seed([type]);
+            const result = await repository.find("type-1");
 
-			// Act
-			const found = await repository.findById(type.id);
+            expect(result).toBe(type);
+        });
 
-			// Assert
-			expect(found).not.toBeNull();
-			expect(found?.id).toBe(type.id);
-		});
+        it("should find a type by slug", async () => {
+            const type = mockPostType({ id: "type-1", slug: "blog" });
+            repository.seed([type]);
 
-		it("deve retornar null quando tipo não existe", async () => {
-			// Arrange
-			const nonExistentId = generateUUID();
+            const result = await repository.find("blog");
 
-			// Act
-			const found = await repository.findById(nonExistentId);
+            expect(result).toBe(type);
+        });
 
-			// Assert
-			expect(found).toBeNull();
-		});
+        it("should prioritize id over slug", async () => {
+            const typeA = mockPostType({ id: "blog", slug: "slug-a" });
+            const typeB = mockPostType({ id: "type-b", slug: "blog" });
+            repository.seed([typeA, typeB]);
 
-		it("deve retornar o tipo com todas as propriedades", async () => {
-			// Arrange
-			const type = makeValidPostTypeData();
-			repository.seed([type]);
+            const result = await repository.find("blog");
 
-			// Act
-			const found = await repository.findById(type.id);
+            expect(result).toBe(typeA);
+        });
 
-			// Assert
-			expect(found).toMatchObject({
-				id: type.id,
-				name: type.name,
-				slug: type.slug,
-				createdAt: type.createdAt,
-				updatedAt: type.updatedAt,
-			});
-		});
-	});
+        it("should return null when type is not found", async () => {
+            const result = await repository.find("non-existent");
 
-	describe("findBySlug()", () => {
-		it("deve encontrar um tipo por slug", async () => {
-			// Arrange
-			const type = makeValidPostTypeData({ slug: "artigo-teste" });
-			repository.seed([type]);
+            expect(result).toBeNull();
+        });
+    });
 
-			// Act
-			const found = await repository.findBySlug("artigo-teste");
+    describe("seed", () => {
+        it("should populate the repository with types", () => {
+            const types = [
+                mockPostType({ id: "type-1" }),
+                mockPostType({ id: "type-2" }),
+            ];
 
-			// Assert
-			expect(found).not.toBeNull();
-			expect(found?.slug).toBe("artigo-teste");
-			expect(found?.id).toBe(type.id);
-		});
+            repository.seed(types);
 
-		it("deve retornar null quando tipo não existe", async () => {
-			// Arrange
-			const nonExistentSlug = "slug-inexistente";
+            expect(repository.count()).toBe(2);
+        });
 
-			// Act
-			const found = await repository.findBySlug(nonExistentSlug);
+        it("should overwrite existing types with the same id", () => {
+            const original = mockPostType({ id: "type-1", name: "Original" });
+            const updated = mockPostType({ id: "type-1", name: "Updated" });
 
-			// Assert
-			expect(found).toBeNull();
-		});
+            repository.seed([original]);
+            repository.seed([updated]);
 
-		it("deve retornar o tipo com todas as propriedades", async () => {
-			// Arrange
-			const type = makeValidPostTypeData({ slug: "tutorial" });
-			repository.seed([type]);
+            expect(repository.count()).toBe(1);
+            expect(repository.getAll()[0]!.name).toBe("Updated");
+        });
+    });
 
-			// Act
-			const found = await repository.findBySlug("tutorial");
+    describe("clear", () => {
+        it("should remove all types", () => {
+            repository.seed([mockPostType({ id: "type-1" })]);
 
-			// Assert
-			expect(found).toMatchObject({
-				id: type.id,
-				name: type.name,
-				slug: type.slug,
-				createdAt: type.createdAt,
-				updatedAt: type.updatedAt,
-			});
-		});
+            repository.clear();
 
-		it("deve encontrar o tipo correto quando há múltiplos tipos", async () => {
-			// Arrange
-			const types = [
-				makeValidPostTypeData({ slug: "artigo" }),
-				makeValidPostTypeData({ slug: "tutorial" }),
-				makeValidPostTypeData({ slug: "video" }),
-			];
-			repository.seed(types);
+            expect(repository.count()).toBe(0);
+            expect(repository.getAll()).toEqual([]);
+        });
+    });
 
-			// Act
-			const found = await repository.findBySlug("tutorial");
+    describe("getAll", () => {
+        it("should return all stored types", () => {
+            const types = [
+                mockPostType({ id: "type-1" }),
+                mockPostType({ id: "type-2" }),
+                mockPostType({ id: "type-3" }),
+            ];
+            repository.seed(types);
 
-			// Assert
-			expect(found).not.toBeNull();
-			expect(found?.slug).toBe("tutorial");
-			expect(found?.id).toBe(types[1]?.id);
-		});
-	});
+            const result = repository.getAll();
 
-	describe("seed()", () => {
-		it("deve popular o repositório com múltiplos tipos", () => {
-			// Arrange
-			const types = [
-				makeValidPostTypeData(),
-				makeValidPostTypeData(),
-				makeValidPostTypeData(),
-			];
+            expect(result).toHaveLength(3);
+        });
 
-			// Act
-			repository.seed(types);
+        it("should return empty array when repository is empty", () => {
+            expect(repository.getAll()).toEqual([]);
+        });
+    });
 
-			// Assert
-			expect(repository.count()).toBe(3);
-		});
+    describe("count", () => {
+        it("should return the number of stored types", () => {
+            repository.seed([
+                mockPostType({ id: "type-1" }),
+                mockPostType({ id: "type-2" }),
+            ]);
 
-		it("deve sobrescrever tipo existente com mesmo ID", () => {
-			// Arrange
-			const id = generateUUID();
-			const type1 = makeValidPostTypeData({ id, name: "Original" });
-			const type2 = makeValidPostTypeData({ id, name: "Atualizado" });
+            expect(repository.count()).toBe(2);
+        });
 
-			// Act
-			repository.seed([type1]);
-			repository.seed([type2]);
-
-			// Assert
-			const found = repository.getAll();
-			expect(found).toHaveLength(1);
-			expect(found[0]?.name).toBe("Atualizado");
-		});
-	});
-
-	describe("clear()", () => {
-		it("deve limpar todos os tipos do repositório", () => {
-			// Arrange
-			const types = [makeValidPostTypeData(), makeValidPostTypeData()];
-			repository.seed(types);
-
-			// Act
-			repository.clear();
-
-			// Assert
-			expect(repository.count()).toBe(0);
-		});
-	});
-
-	describe("getAll()", () => {
-		it("deve retornar todos os tipos", () => {
-			// Arrange
-			const types = [
-				makeValidPostTypeData(),
-				makeValidPostTypeData(),
-				makeValidPostTypeData(),
-			];
-			repository.seed(types);
-
-			// Act
-			const allTypes = repository.getAll();
-
-			// Assert
-			expect(allTypes).toHaveLength(3);
-		});
-
-		it("deve retornar array vazio quando repositório está vazio", () => {
-			// Act
-			const allTypes = repository.getAll();
-
-			// Assert
-			expect(allTypes).toEqual([]);
-		});
-	});
-
-	describe("length()", () => {
-		it("deve retornar 0 para repositório vazio", () => {
-			// Act
-			const length = repository.count();
-
-			// Assert
-			expect(length).toBe(0);
-		});
-
-		it("deve retornar a quantidade correta de tipos", () => {
-			// Arrange
-			const types = [
-				makeValidPostTypeData(),
-				makeValidPostTypeData(),
-				makeValidPostTypeData(),
-			];
-			repository.seed(types);
-
-			// Act
-			const length = repository.count();
-
-			// Assert
-			expect(length).toBe(3);
-		});
-
-		it("deve refletir mudanças após operações", () => {
-			// Arrange
-			const type1 = makeValidPostTypeData();
-			const type2 = makeValidPostTypeData();
-
-			// Act & Assert
-			expect(repository.count()).toBe(0);
-
-			repository.seed([type1]);
-			expect(repository.count()).toBe(1);
-
-			repository.seed([type2]);
-			expect(repository.count()).toBe(2);
-
-			repository.clear();
-			expect(repository.count()).toBe(0);
-		});
-	});
+        it("should return 0 when repository is empty", () => {
+            expect(repository.count()).toBe(0);
+        });
+    });
 });
